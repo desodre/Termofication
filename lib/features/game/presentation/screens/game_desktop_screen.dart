@@ -79,7 +79,9 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
           backgroundColor: AppColors.background,
           elevation: 0,
           title: Text(
-            widget.mode == GameMode.daily ? 'TERMO' : 'MODO INFINITO',
+            widget.mode == GameMode.infinite
+                ? 'MODO INFINITO'
+                : widget.mode.displayName.toUpperCase(),
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               letterSpacing: 4,
@@ -154,6 +156,7 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
                 );
               }
 
+              final attemptsLimit = GameCubit.maxAttemptsForMode(state.mode);
               final isGameOver = state.status == GameStatus.won || state.status == GameStatus.lost;
 
               return Column(
@@ -163,9 +166,10 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
                       child: SingleChildScrollView(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: ConstrainedBox(
-                            constraints: const BoxConstraints(maxWidth: 400),
-                            child: const GuessGrid(),
+                          child: _BoardsLayout(
+                            mode: state.mode,
+                            boardCompleted: state.boardCompleted,
+                            maxAttempts: attemptsLimit,
                           ),
                         ),
                       ),
@@ -219,6 +223,133 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
   }
 }
 
+class _BoardsLayout extends StatelessWidget {
+  final GameMode mode;
+  final List<bool> boardCompleted;
+  final int maxAttempts;
+
+  const _BoardsLayout({
+    required this.mode,
+    required this.boardCompleted,
+    required this.maxAttempts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (mode.wordCount == 1) {
+      return ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: GuessGrid(boardIndex: 0, maxAttempts: maxAttempts),
+      );
+    }
+
+    if (mode.wordCount == 2) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final horizontal = constraints.maxWidth >= 780;
+          final children = [
+            _BoardPanel(
+              title: 'PALAVRA 1',
+              completed: boardCompleted.isNotEmpty && boardCompleted[0],
+              child: GuessGrid(boardIndex: 0, maxAttempts: maxAttempts),
+            ),
+            _BoardPanel(
+              title: 'PALAVRA 2',
+              completed: boardCompleted.length > 1 && boardCompleted[1],
+              child: GuessGrid(boardIndex: 1, maxAttempts: maxAttempts),
+            ),
+          ];
+
+          if (horizontal) {
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children
+                  .map((c) => Expanded(child: Padding(padding: const EdgeInsets.all(8), child: c)))
+                  .toList(),
+            );
+          }
+
+          return Column(
+            children: children
+                .map((c) => Padding(padding: const EdgeInsets.only(bottom: 12), child: c))
+                .toList(),
+          );
+        },
+      );
+    }
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      alignment: WrapAlignment.center,
+      children: List.generate(mode.wordCount, (index) {
+        return SizedBox(
+          width: 360,
+          child: _BoardPanel(
+            title: 'PALAVRA ${index + 1}',
+            completed: boardCompleted.length > index && boardCompleted[index],
+            child: GuessGrid(boardIndex: index, maxAttempts: maxAttempts),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _BoardPanel extends StatelessWidget {
+  final String title;
+  final bool completed;
+  final Widget child;
+
+  const _BoardPanel({
+    required this.title,
+    required this.completed,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.cardBg.withValues(alpha: 0.35),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: completed
+              ? AppColors.correct.withValues(alpha: 0.6)
+              : AppColors.borderDefault.withValues(alpha: 0.5),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.textGray,
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (completed) ...[
+                const SizedBox(width: 6),
+                const Icon(Icons.check_circle, color: AppColors.correct, size: 16),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
 class _ResultDialog extends StatelessWidget {
   final GameState state;
   final BuildContext parentContext;
@@ -231,6 +362,9 @@ class _ResultDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final won = state.status == GameStatus.won;
+    final attemptsLimit = GameCubit.maxAttemptsForMode(state.mode);
+    final usedAttempts =
+        state.boardGuesses.isNotEmpty ? state.boardGuesses.first.length : 0;
 
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
@@ -296,13 +430,15 @@ class _ResultDialog extends StatelessWidget {
               // Description
               if (won) ...[
                 Text(
-                  'Você desvendou a palavra secreta!',
+                  state.targetWordIds.length > 1
+                      ? 'Você completou todos os tabuleiros!'
+                      : 'Você desvendou a palavra secreta!',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: AppColors.textWhite.withValues(alpha: 0.9), fontSize: 15),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Acertou em ${state.guesses.length} de 6 tentativas.',
+                  'Acertou em $usedAttempts de $attemptsLimit tentativas.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.textGray, fontSize: 13),
                 ),
@@ -314,18 +450,41 @@ class _ResultDialog extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'A palavra correta era:',
+                  'Palavra(s) correta(s):',
                   style: TextStyle(color: AppColors.textGray, fontSize: 12),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  state.targetWord.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    color: AppColors.present,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 4,
-                  ),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.center,
+                  children: (state.targetWords.isNotEmpty
+                          ? state.targetWords
+                          : [state.targetWord])
+                      .where((w) => w.isNotEmpty)
+                      .map(
+                        (word) => Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.present.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: AppColors.present.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: Text(
+                            word.toUpperCase(),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: AppColors.present,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 2,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
                 ),
               ],
 

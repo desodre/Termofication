@@ -1,18 +1,22 @@
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+// import 'dart:io' show Platform;
+// import 'package:flutter/foundation.dart' show kIsWeb, kReleaseMode;
 import 'package:dio/dio.dart';
 
 class ApiClient {
   static String get _defaultBaseUrl {
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8000';
-    }
-    try {
-      if (Platform.isAndroid || Platform.isIOS) {
-        return 'http://192.168.0.104:8000';
-      }
-    } catch (_) {}
-    return 'http://127.0.0.1:8000';
+    // URL de Produção hospedada no Google Cloud Run
+    const productionUrl = 'https://terminfication-api-943377901075.southamerica-east1.run.app';
+
+    // Para forçar a produção em todos os testes, apenas comente o bloco de debug abaixo:
+    // if (!kReleaseMode) {
+    //   if (kIsWeb) return 'http://127.0.0.1:8000';
+    //   try {
+    //     if (Platform.isAndroid || Platform.isIOS) return 'http://192.168.0.104:8000';
+    //   } catch (_) {}
+    //   return 'http://127.0.0.1:8000';
+    // }
+
+    return productionUrl;
   }
 
   final Dio _dio;

@@ -1,21 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/game_enums.dart';
+import '../../domain/entities/guess_result.dart';
 import '../cubit/game_cubit.dart';
 import '../cubit/game_state.dart';
 import 'letter_tile.dart';
 import 'shake_widget.dart';
 
 class GuessGrid extends StatelessWidget {
-  const GuessGrid({super.key});
+  final int boardIndex;
+  final int maxAttempts;
+
+  const GuessGrid({
+    super.key,
+    this.boardIndex = 0,
+    this.maxAttempts = GameCubit.maxAttempts,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<GameCubit, GameState>(
       builder: (context, state) {
-        final guesses = state.guesses;
+        final guesses = boardIndex < state.boardGuesses.length
+            ? state.boardGuesses[boardIndex]
+            : const <GuessResult>[];
+        final boardCompleted = boardIndex < state.boardCompleted.length
+            ? state.boardCompleted[boardIndex]
+            : false;
         final currentGuess = state.currentGuess;
-        const maxAttempts = GameCubit.maxAttempts;
         const wordLength = GameCubit.wordLength;
 
         return Column(
@@ -41,7 +53,9 @@ class GuessGrid extends StatelessWidget {
                 ),
               );
             } else if (row == guesses.length &&
-                (state.status == GameStatus.playing || state.status == GameStatus.submitting)) {
+                !boardCompleted &&
+                (state.status == GameStatus.playing ||
+                    state.status == GameStatus.submitting)) {
               return ShakeWidget(
                 trigger: state.errorMessage,
                 child: Padding(

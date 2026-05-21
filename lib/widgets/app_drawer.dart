@@ -198,7 +198,7 @@ class AppDrawer extends StatelessWidget {
                           // TODO: Navegar para tela de configurações
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('Configurações em breve!'),
+                              content: const Text('Configurações em breve!', style: .new(color: AppColors.textWhite),),
                               backgroundColor: AppColors.absent,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(

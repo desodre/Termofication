@@ -17,11 +17,11 @@ class MockGameRepository implements GameRepository {
   int nextWordId = 1;
   GuessResult? submitGuessResult;
 
-  Map<String, dynamic>? dailyGameData;
+  final Map<GameMode, Map<String, dynamic>> dailyGameData = {};
   Map<String, int> infiniteStatsData = {'wins': 0, 'losses': 0, 'streak': 0};
 
   @override
-  Future<Challenge> getDailyChallenge() async {
+  Future<Challenge> getDailyChallenge({GameMode mode = GameMode.daily}) async {
     return const Challenge(wordId: 1, length: 5);
   }
 
@@ -57,21 +57,27 @@ class MockGameRepository implements GameRepository {
   }
 
   @override
-  Future<Map<String, dynamic>?> getDailyGame() async => dailyGameData;
+  Future<Map<String, dynamic>?> getDailyGame({required GameMode mode}) async =>
+      dailyGameData[mode];
 
   @override
   Future<void> saveDailyGame({
+    required GameMode mode,
     required String date,
-    required int wordId,
-    required String word,
-    required List<GuessResult> guesses,
+    required List<int> wordIds,
+    required List<String> targetWords,
+    required List<List<GuessResult>> boardGuesses,
+    required List<bool> boardCompleted,
     required GameStatus status,
+    required Map<String, LetterStatus> keyboardColors,
   }) async {
-    dailyGameData = {
+    dailyGameData[mode] = {
       'date': date,
-      'wordId': wordId,
-      'word': word,
-      'guesses': guesses,
+      'wordIds': wordIds,
+      'targetWords': targetWords,
+      'boardGuesses': boardGuesses,
+      'boardCompleted': boardCompleted,
+      'keyboardColors': keyboardColors,
       'status': status,
     };
   }

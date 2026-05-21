@@ -15,6 +15,18 @@ class GameCubit extends Cubit<GameState> {
   static const int maxAttempts = 6;
   static const int wordLength = 5;
 
+  static int maxAttemptsForMode(GameMode mode) {
+    switch (mode) {
+      case GameMode.dailyDueto:
+        return 7;
+      case GameMode.dailyQuarteto:
+        return 9;
+      case GameMode.daily:
+      case GameMode.infinite:
+        return maxAttempts;
+    }
+  }
+
   GameCubit({
     required this.submitGuessUseCase,
     required this.getRandomWordUseCase,
@@ -22,77 +34,137 @@ class GameCubit extends Cubit<GameState> {
   }) : super(const GameState());
 
   Future<void> startGame(GameMode mode) async {
+    final boardCount = mode.wordCount;
+
     emit(state.copyWith(
       status: GameStatus.loading,
       mode: mode,
+      targetWordId: 0,
+      targetWordIds: const [],
+      targetWord: '',
+      targetWords: const [],
       currentGuess: '',
       guesses: [],
+      boardGuesses: List.generate(boardCount, (_) => <GuessResult>[]),
       keyboardColors: {},
+      boardKeyboardColors:
+          List.generate(boardCount, (_) => <String, LetterStatus>{}),
+      boardCompleted: List.generate(boardCount, (_) => false),
       clearError: true,
     ));
 
     try {
-      if (mode == GameMode.daily) {
+      if (mode.isDaily) {
         await _startDailyGame();
       } else {
         await _startInfiniteGame();
       }
-    } catch (e) {
+    } catch (e, st) {
+      print(e);
+      print(st);
       emit(state.copyWith(
         status: GameStatus.error,
-        errorMessage: 'Falha ao conectar ao servidor. Tente jogar mais tarde.',
+        errorMessage: 'Erro: $e',
       ));
     }
   }
 
   Future<void> _startDailyGame() async {
     final today = DateTime.now().toIso8601String().substring(0, 10);
-    final savedData = await repository.getDailyGame();
+    final savedData = await repository.getDailyGame(mode: state.mode);
 
-    if (savedData != null && savedData['date'] == today) {
-      final int wordId = savedData['wordId'] as int;
-      final String word = savedData['word'] as String;
-      final List<GuessResult> guesses = savedData['guesses'] as List<GuessResult>;
+    if (savedData != null &&
+        savedData['date'] == today &&
+        (savedData['wordIds'] as List).isNotEmpty) {
+      final List<int> wordIds = List<int>.from(savedData['wordIds'] as List);
+      final List<String> targetWords =
+          List<String>.from(savedData['targetWords'] as List? ?? const []);
+      final List<List<GuessResult>> boardGuesses =
+          List<List<GuessResult>>.from(savedData['boardGuesses'] as List? ?? const []);
+      final List<bool> boardCompleted =
+          List<bool>.from(savedData['boardCompleted'] as List? ?? const []);
+      final Map<String, LetterStatus> keyboardColors =
+          Map<String, LetterStatus>.from(savedData['keyboardColors'] as Map? ?? const {});
       final GameStatus status = savedData['status'] as GameStatus;
-      
-      final keyboardColors = _rebuildKeyboardColors(guesses);
-      
+
+      final normalizedBoardGuesses = _normalizeBoardGuesses(wordIds.length, boardGuesses);
+      final normalizedBoardCompleted = _normalizeBoardCompleted(
+        wordIds.length,
+        boardCompleted,
+        normalizedBoardGuesses,
+      );
+      final boardKeyboardColors = _rebuildAllBoardKeyboardColors(normalizedBoardGuesses);
+      final mergedKeyboard = keyboardColors.isNotEmpty
+          ? keyboardColors
+          : _mergeAllKeyboardColors(boardKeyboardColors);
+
       emit(state.copyWith(
         status: status,
-        targetWordId: wordId,
-        targetWord: word,
-        guesses: guesses,
-        keyboardColors: keyboardColors,
+        targetWordId: wordIds.first,
+        targetWordIds: wordIds,
+        targetWord: targetWords.isNotEmpty ? targetWords.first : '',
+        targetWords: targetWords,
+        guesses: normalizedBoardGuesses.first,
+        boardGuesses: normalizedBoardGuesses,
+        keyboardColors: mergedKeyboard,
+        boardKeyboardColors: boardKeyboardColors,
+        boardCompleted: normalizedBoardCompleted,
       ));
-    } else {
-      try {
-        final challenge = await repository.getDailyChallenge();
-        emit(state.copyWith(
-          status: GameStatus.playing,
-          targetWordId: challenge.wordId,
-          targetWord: '',
-        ));
-        await _saveDailyState();
-      } catch (e) {
-        emit(state.copyWith(
-          status: GameStatus.error,
-          errorMessage: 'Falha ao conectar ao servidor. Tente jogar mais tarde.',
-        ));
-      }
+      return;
+    }
+
+    try {
+      final challenge = await repository.getDailyChallenge(mode: state.mode);
+      final wordIds = challenge.wordIds.isNotEmpty
+          ? challenge.wordIds.take(state.mode.wordCount).toList()
+          : [challenge.wordId];
+
+      final boardGuesses = List.generate(wordIds.length, (_) => <GuessResult>[]);
+      final boardKeyboardColors =
+          List.generate(wordIds.length, (_) => <String, LetterStatus>{});
+      final boardCompleted = List.generate(wordIds.length, (_) => false);
+
+      emit(state.copyWith(
+        status: GameStatus.playing,
+        targetWordId: wordIds.first,
+        targetWordIds: wordIds,
+        targetWord: '',
+        targetWords: List.generate(wordIds.length, (_) => ''),
+        guesses: boardGuesses.first,
+        boardGuesses: boardGuesses,
+        keyboardColors: {},
+        boardKeyboardColors: boardKeyboardColors,
+        boardCompleted: boardCompleted,
+      ));
+      await _saveDailyState();
+    } catch (e, st) {
+      print(e);
+      print(st);
+      emit(state.copyWith(
+        status: GameStatus.error,
+        errorMessage: 'Erro: $e',
+      ));
     }
   }
 
   Future<void> _startInfiniteGame() async {
     final challenge = await getRandomWordUseCase(length: wordLength);
     final stats = await repository.getInfiniteStats();
-    
+
     emit(state.copyWith(
       status: GameStatus.playing,
       targetWordId: challenge.wordId,
+      targetWordIds: [challenge.wordId],
       targetWord: '',
+      targetWords: const [''],
+      guesses: const [],
+      boardGuesses: const <List<GuessResult>>[[]],
       infiniteWins: stats['wins'] ?? 0,
       infiniteLosses: stats['losses'] ?? 0,
       infiniteStreak: stats['streak'] ?? 0,
+      keyboardColors: const {},
+      boardKeyboardColors: const <Map<String, LetterStatus>>[{}],
+      boardCompleted: const [false],
     ));
   }
 
@@ -128,36 +200,85 @@ class GameCubit extends Cubit<GameState> {
     emit(state.copyWith(status: GameStatus.submitting, clearError: true));
 
     try {
-      final result = await submitGuessUseCase(state.currentGuess, state.targetWordId);
-      
-      final updatedGuesses = List<GuessResult>.from(state.guesses)..add(result);
-      final updatedKeyboard = _updateKeyboardColors(state.keyboardColors, result);
-      
+      final targetWordIds = state.targetWordIds.isNotEmpty
+          ? state.targetWordIds
+          : [state.targetWordId];
+
+      final results = await Future.wait(
+        targetWordIds.map(
+          (wordId) => submitGuessUseCase(state.currentGuess, wordId),
+        ),
+      );
+
+      final updatedBoardGuesses = List<List<GuessResult>>.generate(
+        targetWordIds.length,
+        (index) {
+          final base = index < state.boardGuesses.length
+              ? List<GuessResult>.from(state.boardGuesses[index])
+              : <GuessResult>[];
+          base.add(results[index]);
+          return base;
+        },
+      );
+
+      final updatedBoardKeyboard = List<Map<String, LetterStatus>>.generate(
+        targetWordIds.length,
+        (index) {
+          final base = index < state.boardKeyboardColors.length
+              ? state.boardKeyboardColors[index]
+              : const <String, LetterStatus>{};
+          return _updateKeyboardColors(base, results[index]);
+        },
+      );
+
+      final updatedKeyboard = _mergeAllKeyboardColors(updatedBoardKeyboard);
+      final updatedBoardCompleted = List<bool>.generate(
+        targetWordIds.length,
+        (index) {
+          final wasCompleted =
+              index < state.boardCompleted.length && state.boardCompleted[index];
+          return wasCompleted || results[index].isCorrect;
+        },
+      );
+
+      final attemptsUsed =
+          updatedBoardGuesses.isNotEmpty ? updatedBoardGuesses.first.length : 0;
+      final attemptsLimit = maxAttemptsForMode(state.mode);
+      final allBoardsCompleted =
+          updatedBoardCompleted.isNotEmpty && updatedBoardCompleted.every((b) => b);
+
       GameStatus nextStatus = GameStatus.playing;
       int wins = state.infiniteWins;
       int losses = state.infiniteLosses;
       int streak = state.infiniteStreak;
-      String revealedWord = '';
+      List<String> revealedWords =
+          List<String>.filled(targetWordIds.length, '', growable: false);
 
-      if (result.isCorrect) {
+      if (allBoardsCompleted) {
         nextStatus = GameStatus.won;
-        try {
-          revealedWord = await repository.revealWord(state.targetWordId);
-        } catch (_) {
-          revealedWord = state.currentGuess;
+        for (var i = 0; i < targetWordIds.length; i++) {
+          try {
+            revealedWords[i] = await repository.revealWord(targetWordIds[i]);
+          } catch (_) {
+            revealedWords[i] = '';
+          }
         }
+
         if (state.mode == GameMode.infinite) {
           wins++;
           streak++;
           await repository.saveInfiniteStats(wins: wins, losses: losses, streak: streak);
         }
-      } else if (updatedGuesses.length >= maxAttempts) {
+      } else if (attemptsUsed >= attemptsLimit) {
         nextStatus = GameStatus.lost;
-        try {
-          revealedWord = await repository.revealWord(state.targetWordId);
-        } catch (_) {
-          revealedWord = '';
+        for (var i = 0; i < targetWordIds.length; i++) {
+          try {
+            revealedWords[i] = await repository.revealWord(targetWordIds[i]);
+          } catch (_) {
+            revealedWords[i] = '';
+          }
         }
+
         if (state.mode == GameMode.infinite) {
           losses++;
           streak = 0;
@@ -168,15 +289,21 @@ class GameCubit extends Cubit<GameState> {
       emit(state.copyWith(
         status: nextStatus,
         currentGuess: '',
-        targetWord: revealedWord,
-        guesses: updatedGuesses,
+        targetWord: revealedWords.isNotEmpty ? revealedWords.first : '',
+        targetWords: revealedWords,
+        guesses: updatedBoardGuesses.isNotEmpty
+            ? updatedBoardGuesses.first
+            : const <GuessResult>[],
+        boardGuesses: updatedBoardGuesses,
         keyboardColors: updatedKeyboard,
+        boardKeyboardColors: updatedBoardKeyboard,
+        boardCompleted: updatedBoardCompleted,
         infiniteWins: wins,
         infiniteLosses: losses,
         infiniteStreak: streak,
       ));
 
-      if (state.mode == GameMode.daily) {
+      if (state.mode.isDaily) {
         await _saveDailyState();
       }
     } on InvalidWordException catch (e) {
@@ -202,13 +329,23 @@ class GameCubit extends Cubit<GameState> {
   }
 
   Future<void> _saveDailyState() async {
+    if (!state.mode.isDaily) return;
     final today = DateTime.now().toIso8601String().substring(0, 10);
     await repository.saveDailyGame(
+      mode: state.mode,
       date: today,
-      wordId: state.targetWordId,
-      word: state.targetWord,
-      guesses: state.guesses,
+      wordIds: state.targetWordIds.isNotEmpty
+          ? state.targetWordIds
+          : [state.targetWordId],
+      targetWords: state.targetWords,
+      boardGuesses: state.boardGuesses.isNotEmpty
+          ? state.boardGuesses
+          : [state.guesses],
+      boardCompleted: state.boardCompleted.isNotEmpty
+          ? state.boardCompleted
+          : [state.status == GameStatus.won],
       status: state.status,
+      keyboardColors: state.keyboardColors,
     );
   }
 
@@ -236,5 +373,70 @@ class GameCubit extends Cubit<GameState> {
       colors = _updateKeyboardColors(colors, g);
     }
     return colors;
+  }
+
+  List<List<GuessResult>> _normalizeBoardGuesses(
+    int expectedBoards,
+    List<List<GuessResult>> boardGuesses,
+  ) {
+    final normalized = List<List<GuessResult>>.from(boardGuesses);
+    while (normalized.length < expectedBoards) {
+      normalized.add(<GuessResult>[]);
+    }
+    if (normalized.length > expectedBoards) {
+      return normalized.sublist(0, expectedBoards);
+    }
+    return normalized;
+  }
+
+  List<bool> _normalizeBoardCompleted(
+    int expectedBoards,
+    List<bool> boardCompleted,
+    List<List<GuessResult>> boardGuesses,
+  ) {
+    final normalized = List<bool>.from(boardCompleted);
+    while (normalized.length < expectedBoards) {
+      final idx = normalized.length;
+      final guesses = idx < boardGuesses.length ? boardGuesses[idx] : const <GuessResult>[];
+      normalized.add(guesses.any((g) => g.isCorrect));
+    }
+    if (normalized.length > expectedBoards) {
+      return normalized.sublist(0, expectedBoards);
+    }
+    return normalized;
+  }
+
+  List<Map<String, LetterStatus>> _rebuildAllBoardKeyboardColors(
+    List<List<GuessResult>> boardGuesses,
+  ) {
+    return boardGuesses.map(_rebuildKeyboardColors).toList();
+  }
+
+  Map<String, LetterStatus> _mergeAllKeyboardColors(
+    List<Map<String, LetterStatus>> boardKeyboardColors,
+  ) {
+    final merged = <String, LetterStatus>{};
+    for (final boardColors in boardKeyboardColors) {
+      for (final entry in boardColors.entries) {
+        final current = merged[entry.key] ?? LetterStatus.unknown;
+        if (_priority(entry.value) > _priority(current)) {
+          merged[entry.key] = entry.value;
+        }
+      }
+    }
+    return merged;
+  }
+
+  int _priority(LetterStatus status) {
+    switch (status) {
+      case LetterStatus.correct:
+        return 3;
+      case LetterStatus.present:
+        return 2;
+      case LetterStatus.absent:
+        return 1;
+      case LetterStatus.unknown:
+        return 0;
+    }
   }
 }

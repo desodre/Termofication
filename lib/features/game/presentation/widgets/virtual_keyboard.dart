@@ -18,7 +18,8 @@ class VirtualKeyboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<GameCubit, GameState>(
       builder: (context, state) {
-        final colors = state.keyboardColors;
+        final boardColors = state.boardKeyboardColors;
+        final wordCount = state.mode.wordCount;
         final enabled = state.status == GameStatus.playing;
         final cubit = context.read<GameCubit>();
 
@@ -34,8 +35,15 @@ class VirtualKeyboard extends StatelessWidget {
             }
 
             for (final key in row) {
-              final status = colors[key.toLowerCase()] ?? LetterStatus.unknown;
               final isWide = key == 'ENTER' || key == '⌫';
+              
+              final List<LetterStatus> statuses = [];
+              for (int i = 0; i < wordCount; i++) {
+                final boardColorMap = i < boardColors.length ? boardColors[i] : <String, LetterStatus>{};
+                // fb.letter is UPPERCASE from GameRemoteDataSourceImpl
+                statuses.add(boardColorMap[key.toUpperCase()] ?? LetterStatus.unknown);
+              }
+
               final flexVal = isWide ? 15 : 10;
 
               rowItems.add(
@@ -43,7 +51,7 @@ class VirtualKeyboard extends StatelessWidget {
                   flex: flexVal,
                   child: _KeyButton(
                     label: key,
-                    status: status,
+                    statuses: statuses,
                     enabled: enabled,
                     onTap: () {
                       if (!enabled) return;
@@ -80,13 +88,13 @@ class VirtualKeyboard extends StatelessWidget {
 
 class _KeyButton extends StatefulWidget {
   final String label;
-  final LetterStatus status;
+  final List<LetterStatus> statuses;
   final bool enabled;
   final VoidCallback onTap;
 
   const _KeyButton({
     required this.label,
-    required this.status,
+    required this.statuses,
     required this.enabled,
     required this.onTap,
   });
@@ -99,8 +107,8 @@ class _KeyButtonState extends State<_KeyButton> {
   bool _isPressed = false;
   bool _isHovered = false;
 
-  Color get _bgColor {
-    switch (widget.status) {
+  Color _getColor(LetterStatus status) {
+    switch (status) {
       case LetterStatus.correct:
         return AppColors.correct;
       case LetterStatus.present:
@@ -114,16 +122,63 @@ class _KeyButtonState extends State<_KeyButton> {
 
   bool get _isWide => widget.label == 'ENTER' || widget.label == '⌫';
 
+  Widget _buildBackground() {
+    final count = widget.statuses.length;
+    
+    if (_isWide || count <= 1) {
+      final status = count > 0 ? widget.statuses.first : LetterStatus.unknown;
+      return Container(color: _getColor(status));
+    }
+
+    final dividerColor = AppColors.background.withValues(alpha: 0.5);
+
+    if (count == 2) {
+      return Row(
+        children: [
+          Expanded(child: Container(color: _getColor(widget.statuses[0]))),
+          Container(width: 2, color: dividerColor),
+          Expanded(child: Container(color: _getColor(widget.statuses[1]))),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: Container(color: _getColor(widget.statuses[0]))),
+              Container(width: 2, color: dividerColor),
+              Expanded(child: Container(color: _getColor(widget.statuses[1]))),
+            ],
+          ),
+        ),
+        Container(height: 2, color: dividerColor),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: Container(color: _getColor(widget.statuses.length > 2 ? widget.statuses[2] : LetterStatus.unknown))),
+              Container(width: 2, color: dividerColor),
+              Expanded(child: Container(color: _getColor(widget.statuses.length > 3 ? widget.statuses[3] : LetterStatus.unknown))),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final double height = 54;
 
-    Color buttonColor = widget.enabled ? _bgColor : _bgColor.withValues(alpha: 0.4);
-    if (widget.enabled) {
+    Color overlayColor = Colors.transparent;
+    if (!widget.enabled) {
+      overlayColor = AppColors.background.withValues(alpha: 0.6);
+    } else {
       if (_isPressed) {
-        buttonColor = buttonColor.withValues(alpha: 0.75);
+        overlayColor = Colors.black.withValues(alpha: 0.25);
       } else if (_isHovered) {
-        buttonColor = buttonColor.withValues(alpha: 0.85);
+        overlayColor = Colors.white.withValues(alpha: 0.15);
       }
     }
 
@@ -135,54 +190,62 @@ class _KeyButtonState extends State<_KeyButton> {
         cursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
         child: GestureDetector(
           onTapDown: (_) {
-            if (widget.enabled) {
-              setState(() => _isPressed = true);
-            }
+            if (widget.enabled) setState(() => _isPressed = true);
           },
           onTapUp: (_) {
-            if (widget.enabled) {
-              setState(() => _isPressed = false);
-            }
+            if (widget.enabled) setState(() => _isPressed = false);
           },
           onTapCancel: () {
-            if (widget.enabled) {
-              setState(() => _isPressed = false);
-            }
+            if (widget.enabled) setState(() => _isPressed = false);
           },
           onTap: widget.enabled ? widget.onTap : null,
           child: AnimatedScale(
             scale: _isPressed ? 0.92 : (_isHovered && widget.enabled ? 1.05 : 1.0),
             duration: const Duration(milliseconds: 100),
             curve: Curves.easeOut,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
+            child: SizedBox(
               width: double.infinity,
               height: height,
-              decoration: BoxDecoration(
-                color: buttonColor,
-                borderRadius: BorderRadius.circular(6),
-                border: _isHovered && widget.enabled
-                    ? Border.all(color: AppColors.textWhite.withValues(alpha: 0.3), width: 1.5)
-                    : null,
-                boxShadow: _isHovered && widget.enabled
-                    ? [
-                        BoxShadow(
-                          color: buttonColor.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        )
-                      ]
-                    : null,
-              ),
-              child: Center(
-                child: Text(
-                  widget.label,
-                  style: TextStyle(
-                    fontSize: _isWide ? 10 : 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textWhite,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: _buildBackground(),
+                    ),
                   ),
-                ),
+                  Positioned.fill(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      decoration: BoxDecoration(
+                        color: overlayColor,
+                        borderRadius: BorderRadius.circular(6),
+                        border: _isHovered && widget.enabled
+                            ? Border.all(color: AppColors.textWhite.withValues(alpha: 0.3), width: 1.5)
+                            : null,
+                        boxShadow: _isHovered && widget.enabled
+                            ? [
+                                BoxShadow(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                )
+                              ]
+                            : null,
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Text(
+                      widget.label,
+                      style: TextStyle(
+                        fontSize: _isWide ? 10 : 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textWhite,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

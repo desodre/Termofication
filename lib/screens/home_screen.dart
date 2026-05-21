@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           subtitle: 'Desafio único a cada 24 horas',
                           icon: Icons.calendar_today_rounded,
                           themeColor: AppColors.correct,
-                          route: AppRoutes.dailyGame,
+                          route: AppRoutes.dailyGameSelect,
                         ),
                         const SizedBox(height: 20),
                         const _ModeCard(

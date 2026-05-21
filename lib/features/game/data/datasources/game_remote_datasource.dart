@@ -58,6 +58,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
   @override
   Future<ChallengeModel> getDailyChallenge({String gameMode = 'TERMO'}) async {
     final today = DateTime.now().toIso8601String().substring(0, 10);
+    final expectedWordCount = _expectedWordCountForMode(gameMode);
     try {
       final response = await Supabase.instance.client
           .from('daily_challenges')
@@ -71,7 +72,8 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
             .map((e) => e as int)
             .toList();
         if (wordIds.isNotEmpty) {
-          final wordId = wordIds[0];
+          final selectedWordIds = wordIds.take(expectedWordCount).toList();
+          final wordId = selectedWordIds[0];
           
           final wordResp = await Supabase.instance.client
               .from('valid_words')
@@ -83,15 +85,53 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
           return ChallengeModel(
             wordId: wordId,
             length: length,
-            wordIds: wordIds,
+            wordIds: selectedWordIds,
           );
         }
       }
-    } catch (_) {
+    } catch (e, st) {
+      print('Error in getDailyChallenge primary query: \$e');
+      print(st);
       // Fallback in case of database or connection errors
     }
 
-    return await getRandomChallenge(5);
+    if (expectedWordCount == 1) {
+      return await getRandomChallenge(5);
+    }
+
+    try {
+      final response = await Supabase.instance.client
+          .from('valid_words')
+          .select('id')
+          .eq('length', 5)
+          .eq('is_target', true);
+
+      final List<dynamic> wordsList = response as List<dynamic>;
+      if (wordsList.length < expectedWordCount) {
+        throw ServerException('Palavras insuficientes para gerar o desafio diário.');
+      }
+
+      final nowSeed = DateTime.now().millisecondsSinceEpoch;
+      final selectedWordIds = <int>[];
+      final used = <int>{};
+      var cursor = 0;
+      while (selectedWordIds.length < expectedWordCount && cursor < wordsList.length) {
+        final idx = (nowSeed + cursor * 997) % wordsList.length;
+        final id = wordsList[idx]['id'] as int;
+        if (used.add(id)) {
+          selectedWordIds.add(id);
+        }
+        cursor++;
+      }
+
+      return ChallengeModel(
+        wordId: selectedWordIds.first,
+        length: 5,
+        wordIds: selectedWordIds,
+      );
+    } catch (e) {
+      throw ServerException('Falha ao carregar desafio diário para $gameMode.');
+    }
   }
 
   @override
@@ -125,7 +165,7 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
       return ChallengeModel(wordId: wordId, length: length, wordIds: [wordId]);
     } catch (e) {
       if (e is ServerException) rethrow;
-      throw ServerException('Falha ao conectar com o banco de dados Supabase.');
+      throw ServerException('Falha ao conectar com o banco de dados Supabase: ' + e.toString());
     }
   }
 
@@ -183,6 +223,17 @@ class GameRemoteDataSourceImpl implements GameRemoteDataSource {
       return response['words'] as String;
     } catch (e) {
       throw ServerException('Erro ao revelar palavra secreta: ${e.toString()}');
+    }
+  }
+
+  int _expectedWordCountForMode(String gameMode) {
+    switch (gameMode.trim().toUpperCase()) {
+      case 'DUETO':
+        return 2;
+      case 'QUARTETO':
+        return 4;
+      default:
+        return 1;
     }
   }
 }

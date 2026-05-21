@@ -16,8 +16,8 @@ class GameRepositoryImpl implements GameRepository {
   }) : storage = storage ?? GetStorage();
 
   @override
-  Future<Challenge> getDailyChallenge() async {
-    return await remoteDataSource.getDailyChallenge();
+  Future<Challenge> getDailyChallenge({GameMode mode = GameMode.daily}) async {
+    return await remoteDataSource.getDailyChallenge(gameMode: mode.supabaseKey);
   }
 
   @override
@@ -37,53 +37,130 @@ class GameRepositoryImpl implements GameRepository {
 
   @override
   Future<void> saveDailyGame({
+    required GameMode mode,
     required String date,
-    required int wordId,
-    required String word,
-    required List<GuessResult> guesses,
+    required List<int> wordIds,
+    required List<String> targetWords,
+    required List<List<GuessResult>> boardGuesses,
+    required List<bool> boardCompleted,
     required GameStatus status,
+    required Map<String, LetterStatus> keyboardColors,
   }) async {
-    await storage.write('daily_date', date);
-    await storage.write('daily_word_id', wordId);
-    await storage.write('daily_word', word);
-    
-    final serializedGuesses = guesses.map((g) {
-      if (g is GuessResultModel) {
-        return g.toJson();
-      }
-      return GuessResultModel(
-        guess: g.guess,
-        isCorrect: g.isCorrect,
-        feedback: g.feedback,
-      ).toJson();
-    }).toList();
-    
-    await storage.write('daily_guesses', serializedGuesses);
-    await storage.write('daily_status', status.name);
+    final prefix = 'daily_${mode.supabaseKey.toLowerCase()}';
+
+    await storage.write('${prefix}_date', date);
+    await storage.write('${prefix}_word_ids', wordIds);
+    await storage.write('${prefix}_target_words', targetWords);
+    await storage.write('${prefix}_board_completed', boardCompleted);
+    await storage.write('${prefix}_status', status.name);
+    await storage.write('${prefix}_keyboard_colors',
+        keyboardColors.map((k, v) => MapEntry(k, v.name)));
+
+    final serializedBoards = boardGuesses
+        .map(
+          (board) => board.map((g) {
+            if (g is GuessResultModel) {
+              return g.toJson();
+            }
+            return GuessResultModel(
+              guess: g.guess,
+              isCorrect: g.isCorrect,
+              feedback: g.feedback,
+            ).toJson();
+          }).toList(),
+        )
+        .toList();
+
+    await storage.write('${prefix}_board_guesses', serializedBoards);
+
+    // Retrocompatibilidade para o modo TERMO legado
+    if (mode == GameMode.daily) {
+      await storage.write('daily_date', date);
+      await storage.write('daily_word_id', wordIds.isNotEmpty ? wordIds.first : 0);
+      await storage.write(
+          'daily_word', targetWords.isNotEmpty ? targetWords.first : '');
+      await storage.write(
+          'daily_guesses', serializedBoards.isNotEmpty ? serializedBoards.first : []);
+      await storage.write('daily_status', status.name);
+    }
   }
 
   @override
-  Future<Map<String, dynamic>?> getDailyGame() async {
-    final date = storage.read<String>('daily_date');
+  Future<Map<String, dynamic>?> getDailyGame({required GameMode mode}) async {
+    final prefix = 'daily_${mode.supabaseKey.toLowerCase()}';
+    String? date = storage.read<String>('${prefix}_date');
+
+    if (mode == GameMode.daily && date == null) {
+      date = storage.read<String>('daily_date');
+    }
     if (date == null) return null;
-    
-    final wordId = storage.read<int>('daily_word_id') ?? 0;
-    final word = storage.read<String>('daily_word') ?? '';
-    final savedGuesses = storage.read<List>('daily_guesses');
-    final statusStr = storage.read<String>('daily_status') ?? 'playing';
-    
-    List<GuessResult> guesses = [];
-    if (savedGuesses != null) {
-      guesses = savedGuesses
+
+    List<int> wordIds = [];
+    final rawWordIds = storage.read<List>('${prefix}_word_ids');
+    if (rawWordIds != null) {
+      wordIds = rawWordIds.map((e) => e as int).toList();
+    } else if (mode == GameMode.daily) {
+      final legacyWordId = storage.read<int>('daily_word_id');
+      if (legacyWordId != null) {
+        wordIds = [legacyWordId];
+      }
+    }
+
+    if (wordIds.isEmpty) return null;
+
+    List<String> targetWords = [];
+    final rawTargetWords = storage.read<List>('${prefix}_target_words');
+    if (rawTargetWords != null) {
+      targetWords = rawTargetWords.map((e) => e.toString()).toList();
+    } else if (mode == GameMode.daily) {
+      final legacyWord = storage.read<String>('daily_word') ?? '';
+      targetWords = [legacyWord];
+    }
+
+    final rawBoardGuesses = storage.read<List>('${prefix}_board_guesses');
+    List<List<GuessResult>> boardGuesses = [];
+    if (rawBoardGuesses != null) {
+      boardGuesses = rawBoardGuesses.map((board) {
+        final boardList = board as List;
+        return boardList
+            .map((g) => GuessResultModel.fromJson(Map<String, dynamic>.from(g as Map)))
+            .toList();
+      }).toList();
+    } else if (mode == GameMode.daily) {
+      final legacyGuesses = storage.read<List>('daily_guesses');
+      final guesses = (legacyGuesses ?? [])
           .map((g) => GuessResultModel.fromJson(Map<String, dynamic>.from(g as Map)))
           .toList();
+      boardGuesses = [guesses];
     }
-    
+
+    List<bool> boardCompleted = [];
+    final rawBoardCompleted = storage.read<List>('${prefix}_board_completed');
+    if (rawBoardCompleted != null) {
+      boardCompleted = rawBoardCompleted.map((e) => e as bool).toList();
+    }
+
+    final statusStr = storage.read<String>('${prefix}_status') ??
+        (mode == GameMode.daily
+            ? (storage.read<String>('daily_status') ?? 'playing')
+            : 'playing');
+
+    final rawKeyboard =
+        storage.read<Map>('${prefix}_keyboard_colors') ?? <String, dynamic>{};
+    final keyboardColors = <String, LetterStatus>{};
+    for (final entry in rawKeyboard.entries) {
+      final key = entry.key.toString();
+      final value = entry.value.toString();
+      keyboardColors[key] = _letterStatusFromString(value);
+    }
+
     return {
       'date': date,
-      'wordId': wordId,
-      'word': word,
-      'guesses': guesses,
+      'wordIds': wordIds,
+      'targetWords': targetWords,
+      'boardGuesses': boardGuesses,
+      'boardCompleted': boardCompleted,
+      'keyboardColors': keyboardColors,
       'status': _statusFromString(statusStr),
     };
   }
@@ -126,6 +203,19 @@ class GameRepositoryImpl implements GameRepository {
         return GameStatus.error;
       default:
         return GameStatus.playing;
+    }
+  }
+
+  LetterStatus _letterStatusFromString(String s) {
+    switch (s) {
+      case 'absent':
+        return LetterStatus.absent;
+      case 'present':
+        return LetterStatus.present;
+      case 'correct':
+        return LetterStatus.correct;
+      default:
+        return LetterStatus.unknown;
     }
   }
 }

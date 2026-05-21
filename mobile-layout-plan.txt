@@ -1,0 +1,38 @@
+Plano proposto (mobile responsivo para Dueto/Quarteto):
+
+1. Mapear constraints da tela
+   - Medir largura útil no `GameDesktopScreen`/layout atual via `LayoutBuilder`.
+   - Definir breakpoints móveis (ex.: `< 430`, `430–600`, `> 600`) para decidir tamanho de cada board.
+
+2. Trocar o empilhamento por grid adaptativo
+   - Remover o fallback em `ListView` para Dueto/Quarteto no mobile.
+   - Usar `Wrap` ou `GridView` não-scrollável (`shrinkWrap`) para forçar:
+     - Dueto: 2 boards lado a lado.
+     - Quarteto: 2 colunas × 2 linhas.
+
+3. Escalar tamanho das células do `GuessGrid`
+   - Tornar o `LetterTile` responsivo por board com cálculo de `tileSize` baseado em:
+     - largura disponível da coluna,
+     - espaçamento horizontal/vertical,
+     - quantidade de colunas do board (5 letras).
+   - Fórmula base: `tileSize = (boardWidth - gapsInternos) / 5`, com `clamp(min, max)` (ex.: 36–56).
+
+4. Ajustar espaçamentos e tipografia em modo compacto
+   - Reduzir paddings internos do board/painel no mobile.
+   - Ajustar `fontSize` da letra proporcional ao `tileSize`.
+   - Manter toque confortável no teclado (não reduzir teclado para compensar grid).
+
+5. Garantir estabilidade visual e overflow zero
+   - Proibir rolagem horizontal.
+   - Se faltar altura, permitir rolagem vertical da área central sem quebrar a grade 2x1/2x2.
+   - Validar que cabe em retrato sem cortar header/teclado.
+
+6. Critérios de aceite
+   - Dueto mobile: sempre 2 boards lado a lado.
+   - Quarteto mobile: sempre 2 em cima + 2 embaixo.
+   - Células permanecem legíveis e animadas (pop/flip/shake) sem sobreposição.
+   - Nenhum overflow/layout overflow em tamanhos comuns (360x800, 390x844, 412x915).
+
+7. Validação
+   - Teste manual em emuladores/simuladores de larguras diferentes.
+   - Revisar comportamento em rotação e em web estreita para não regredir desktop/tablet.
