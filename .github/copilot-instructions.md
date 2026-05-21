@@ -1,103 +1,139 @@
 # Copilot Instructions — termofication_app
 
-Flutter MVP of the **Termo** game (Portuguese Wordle). The app consumes a FastAPI backend (`http://127.0.0.1:8000`) for word fetching and guess validation.
+Flutter app do jogo **Termo** com arquitetura por features (Clean-ish) + **BLoC/Cubit**.  
+Hoje o core do jogo usa **Supabase** (tabelas `daily_challenges` e `valid_words`) e persistência local com **GetStorage**.
 
 ---
 
 ## Commands
 
 ```bash
-# Install dependencies
+# Dependências
 flutter pub get
 
-# Run the app
+# App
 flutter run
 
-# Analyze (lint + type check)
+# Análise estática
 flutter analyze
 
-# Run all tests
+# Testes
 flutter test
 
-# Run a single test file
+# Teste específico
 flutter test test/widget_test.dart
 ```
 
-> Tests require a running API server at `http://127.0.0.1:8000`. The current test suite is a placeholder smoke test.
+---
+
+## Arquitetura atual
+
+### Estado global e DI
+- O app inicia em `lib/main.dart`.
+- Providers globais:
+  - `BlocProvider<GameCubit>`
+  - `BlocProvider<AuthCubit>`
+- Injeção manual de dependências em `main.dart`:
+  - `ApiClient` → `GameRemoteDataSourceImpl` → `GameRepositoryImpl`
+  - `SubmitGuessUseCase` / `GetRandomWordUseCase`
+
+### Fluxo principal
+```text
+UI (BlocBuilder/BlocListener)
+  → GameCubit
+  → UseCases
+  → GameRepository
+  → GameRemoteDataSource (Supabase)
+```
+
+### Navegação
+- Fonte única: `lib/routes/app_routes.dart`.
+- Rotas nomeadas:
+  - `/` (`HomeScreen`)
+  - `/game/daily` (`GameDesktopScreen(mode: GameMode.daily)`)
+  - `/game/infinite` (`GameDesktopScreen(mode: GameMode.infinite)`)
+- `Navigator.pushNamed` é o padrão.
 
 ---
 
-## Architecture
+## Convenções importantes
 
-All game state lives in a **single `GameProvider`** (Provider/ChangeNotifier) mounted at the root in `main.dart`. There is no secondary provider — all screens consume `GameProvider` via `context.watch` / `context.read`.
+### BLoC/Cubit (não Provider)
+- Use `BlocBuilder` para render e `BlocListener` para efeitos colaterais.
+- Em callbacks/eventos, use `context.read<GameCubit>()` / `context.read<AuthCubit>()`.
+- Não reintroduzir `ChangeNotifier`/`Provider` para o fluxo principal.
 
-**Request flow:**
-```
-Screen → context.read<GameProvider>() → ApiService → http://127.0.0.1:8000
-```
+### Inicialização de jogo
+- Em `GameDesktopScreen`, `startGame(mode)` é chamado via `WidgetsBinding.instance.addPostFrameCallback` no `initState`.
+- Mantenha esse padrão para evitar acesso prematuro ao contexto.
 
-**Persistence flow (GetStorage):**
-```
-GameProvider._startDailyGame() → reads/writes daily_date, daily_word, daily_guesses, daily_status
-GameProvider._onGameEnd()      → reads/writes infinite_wins, infinite_losses, infinite_streak
-```
+### Variáveis de ambiente (Supabase)
+- `main.dart` carrega `.env` com `flutter_dotenv`.
+- Chaves obrigatórias:
+  - `SUPABASE_URL`
+  - `SUPABASE_ANON_KEY`
+- Se ausentes, o app lança `StateError` no bootstrap.
 
-**Navigation:**
-`AppRoutes` is the single source of truth for named routes. All pushes use `Navigator.pushNamed`. `GameScreen` is shared between both modes — the `GameMode` enum value is passed as a constructor parameter and forwarded to `GameProvider.startGame()`.
+### Lógica de jogo
+- Constantes oficiais:
+  - `GameCubit.maxAttempts = 6`
+  - `GameCubit.wordLength = 5`
+- Prioridade de cor do teclado (nunca downgrade), em `_updateKeyboardColors()`:
+  - `correct` nunca é sobrescrito
+  - `present` não é substituído por `absent`
 
----
+### Persistência local (GetStorage)
+- Jogo diário:
+  - `daily_date`, `daily_word_id`, `daily_word`, `daily_guesses`, `daily_status`
+- Estatísticas infinito:
+  - `infinite_wins`, `infinite_losses`, `infinite_streak`
 
-## Key Conventions
+### Modos de jogo
+- `GameMode` possui: `daily`, `dailyDueto`, `dailyQuarteto`, `infinite`.
+- UI/rotas expõem atualmente `daily` e `infinite`.
+- `GameModeExtension.supabaseKey` mapeia:
+  - `daily`/`infinite` → `TERMO`
+  - `dailyDueto` → `DUETO`
+  - `dailyQuarteto` → `QUARTETO`
 
-### Provider usage
-- Use `context.watch<GameProvider>()` in `build()` to rebuild on state changes.
-- Use `context.read<GameProvider>()` inside callbacks/event handlers (not in `build`).
+### Idioma e UX
+- Strings de UI em português (pt-BR).
+- Componentes visuais privados e específicos devem ficar no mesmo arquivo (`_ClassePrivada`).
 
-### Starting a game
-`GameProvider.startGame(mode)` must always be called via `WidgetsBinding.instance.addPostFrameCallback` from `initState`, never directly in `initState`. This is the established pattern in `GameScreen`.
-
-### Daily mode persistence
-The daily word is a random 5-letter word fetched once per calendar day and cached in GetStorage under `daily_date` / `daily_word`. There is **no server-side daily word ID resolution** — the API's `/game/daily-challenge/TERMO` endpoint is not currently used. Do not attempt to resolve `word_ids` to actual words; the random-per-day approach is intentional.
-
-### LetterStatus priority (keyboard coloring)
-When updating the keyboard state after a guess, statuses only ever upgrade, never downgrade:
-- `correct` is never overwritten.
-- `present` is not overwritten by `absent`.
-- This logic lives in `GameProvider._updateKeyboardState()`.
-
-### Private widgets
-Helper widgets used only within one screen or widget file are defined as private classes (prefixed `_`) in the **same file**. Do not extract them to `lib/widgets/` unless they are reused across files.
-
-### Color palette
-| Role | Hex |
-|---|---|
-| Correct (green) | `#538D4E` |
-| Present (yellow) | `#B59F3B` |
-| Absent (dark gray) | `#3A3A3C` |
-| Unknown key (mid gray) | `#818384` |
-| App background | `#121213` |
-| Result panel background | `#1A1A1B` |
-
-Always use these exact hex values. Do not introduce new color constants for the game board UI.
-
-### Game constants
-`GameProvider.maxAttempts = 6` and `GameProvider.wordLength = 5` are `static const`. Reference them from the class rather than hardcoding `6` or `5`.
-
-### Language
-All UI strings are in **Portuguese** (pt-BR). Keep new user-facing text in Portuguese.
-
-### API error handling
-`ApiService` throws on non-200 responses. `GameProvider` catches these and writes a Portuguese message to `_errorMessage`, which `GameScreen` renders as `_ErrorBanner`. The 422 status from `POST /game/guess` means the word is invalid or the wrong length — surface it as `'Palavra inválida ou não encontrada no dicionário'`.
+### Paleta
+- `correct` `#538D4E`
+- `present` `#B59F3B`
+- `absent` `#3A3A3C`
+- `unknown` `#818384`
+- `background` `#121213`
+- `cardBg` `#1A1A1B`
 
 ---
 
-## API Reference (backend at `http://127.0.0.1:8000`)
+## Backends e integração
 
-| Method | Path | Purpose |
-|---|---|---|
-| GET | `/word/random/{length}` | Fetch a random word of given length → `{id, words, length}` |
-| GET | `/validate/{word}` | Check if word exists → `{is_valid}` |
-| POST | `/game/guess` | Validate guess against target → `{guess, is_correct, feedback[]}` |
+### Supabase (principal do jogo)
+- Desafio diário: consulta `daily_challenges` por `play_date` + `game_mode`.
+- Dicionário e alvo: tabela `valid_words`.
+- `submitGuess` valida palavra no dicionário e aplica feedback localmente (`correct/present/absent`).
 
-Feedback `status` values per letter: `correct`, `present`, `absent`.  
-`POST /game/guess` returns 422 for invalid/mismatched-length words.
+### FastAPI (uso pontual)
+- `StatsDialog` busca estatísticas remotas em `GET http://127.0.0.1:8000/api/v1/stats` quando usuário autenticado.
+- Para usuário anônimo, usa dados locais do GetStorage.
+
+### ApiClient
+- Base URL padrão:
+  - Web/Desktop: `http://127.0.0.1:8000`
+  - Android/iOS: `http://192.168.0.104:8000`
+- Exceções padronizadas:
+  - `InvalidWordException`
+  - `NetworkException`
+  - `ServerException`
+
+---
+
+## Testes
+
+- `test/features/game/presentation/cubit/game_cubit_test.dart` cobre fluxo principal do `GameCubit`.
+- `test/features/game/data/models/guess_result_model_test.dart` cobre serialização/desserialização de modelos.
+- `test/widget_test.dart` é smoke test placeholder.
