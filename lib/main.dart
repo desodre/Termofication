@@ -1,15 +1,61 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get_storage/get_storage.dart';
-import 'package:provider/provider.dart';
-import 'providers/game_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/network/api_client.dart';
+import 'core/theme/app_colors.dart';
+import 'features/auth/presentation/cubit/auth_cubit.dart';
+import 'features/game/data/datasources/game_remote_datasource.dart';
+import 'features/game/data/repositories/game_repository_impl.dart';
+import 'features/game/domain/usecases/get_random_word_usecase.dart';
+import 'features/game/domain/usecases/submit_guess_usecase.dart';
+import 'features/game/presentation/cubit/game_cubit.dart';
 import 'routes/app_routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await GetStorage.init();
+  await dotenv.load(fileName: '.env');
+
+  final supabaseUrl = dotenv.env['SUPABASE_URL'];
+  final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+
+  if (supabaseUrl == null ||
+      supabaseUrl.isEmpty ||
+      supabaseAnonKey == null ||
+      supabaseAnonKey.isEmpty) {
+    throw StateError(
+      'As variáveis SUPABASE_URL e SUPABASE_ANON_KEY precisam estar definidas no .env',
+    );
+  }
+
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
+  );
+
+  // Injeção de Dependências (Manual e Limpa)
+  final apiClient = ApiClient();
+  final remoteDataSource = GameRemoteDataSourceImpl(apiClient);
+  final repository = GameRepositoryImpl(remoteDataSource: remoteDataSource);
+  final submitGuessUseCase = SubmitGuessUseCase(repository);
+  final getRandomWordUseCase = GetRandomWordUseCase(repository);
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => GameProvider(),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => GameCubit(
+            submitGuessUseCase: submitGuessUseCase,
+            getRandomWordUseCase: getRandomWordUseCase,
+            repository: repository,
+          ),
+        ),
+        BlocProvider(
+          create: (_) => AuthCubit(),
+        ),
+      ],
       child: const TermoApp(),
     ),
   );
@@ -25,10 +71,10 @@ class TermoApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF121213),
+        scaffoldBackgroundColor: AppColors.background,
         appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF121213),
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.background,
+          foregroundColor: AppColors.textWhite,
           elevation: 0,
           centerTitle: true,
         ),

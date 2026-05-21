@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import '../features/game/domain/entities/game_enums.dart';
+import '../features/game/presentation/screens/game_desktop_screen.dart';
 import '../screens/home_screen.dart';
-import '../screens/game_screen.dart';
-import '../models/game_enums.dart';
 
 class AppRoutes {
   static const home = '/';
@@ -10,7 +10,7 @@ class AppRoutes {
 
   static final routes = <String, WidgetBuilder>{
     home: (_) => const HomeScreen(),
-    dailyGame: (_) => const GameScreen(mode: GameMode.daily),
-    infiniteGame: (_) => const GameScreen(mode: GameMode.infinite),
+    dailyGame: (_) => const GameDesktopScreen(mode: GameMode.daily),
+    infiniteGame: (_) => const GameDesktopScreen(mode: GameMode.infinite),
   };
 }
