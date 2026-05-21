@@ -1,4 +1,4 @@
-package com.example.termofication_app
+package com.desodre.termofication
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -236,66 +236,81 @@ class _BoardsLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (mode.wordCount == 1) {
-      return ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400),
-        child: GuessGrid(boardIndex: 0, maxAttempts: maxAttempts),
-      );
-    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableWidth = constraints.maxWidth;
 
-    if (mode.wordCount == 2) {
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final horizontal = constraints.maxWidth >= 780;
-          final children = [
-            _BoardPanel(
-              title: 'PALAVRA 1',
-              completed: boardCompleted.isNotEmpty && boardCompleted[0],
-              child: GuessGrid(boardIndex: 0, maxAttempts: maxAttempts),
-            ),
-            _BoardPanel(
-              title: 'PALAVRA 2',
-              completed: boardCompleted.length > 1 && boardCompleted[1],
-              child: GuessGrid(boardIndex: 1, maxAttempts: maxAttempts),
-            ),
-          ];
+        if (mode.wordCount == 1) {
+          return ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: GuessGrid(boardIndex: 0, maxAttempts: maxAttempts),
+          );
+        }
 
-          if (horizontal) {
-            return Row(
+        final maxBoardWidth = (availableWidth - 12) / 2;
+        final innerWidth = maxBoardWidth - 20; 
+        double tileSize = (innerWidth - 30) / 5;
+        
+        tileSize = tileSize.clamp(20.0, 56.0);
+
+        final exactBoardWidth = (tileSize * 5) + 30 + 20;
+
+        final boards = List.generate(mode.wordCount, (index) {
+          return SizedBox(
+            width: exactBoardWidth,
+            child: _BoardPanel(
+              title: 'PALAVRA ${index + 1}',
+              completed: boardCompleted.length > index && boardCompleted[index],
+              child: GuessGrid(
+                boardIndex: index,
+                maxAttempts: maxAttempts,
+                tileSize: tileSize,
+                tilePadding: 3.0,
+              ),
+            ),
+          );
+        });
+
+        if (mode.wordCount == 2) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              boards[0],
+              const SizedBox(width: 12),
+              boards[1],
+            ],
+          );
+        }
+
+        return Column(
+          children: [
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: children
-                  .map((c) => Expanded(child: Padding(padding: const EdgeInsets.all(8), child: c)))
-                  .toList(),
-            );
-          }
-
-          return Column(
-            children: children
-                .map((c) => Padding(padding: const EdgeInsets.only(bottom: 12), child: c))
-                .toList(),
-          );
-        },
-      );
-    }
-
-    return Wrap(
-      spacing: 12,
-      runSpacing: 12,
-      alignment: WrapAlignment.center,
-      children: List.generate(mode.wordCount, (index) {
-        return SizedBox(
-          width: 360,
-          child: _BoardPanel(
-            title: 'PALAVRA ${index + 1}',
-            completed: boardCompleted.length > index && boardCompleted[index],
-            child: GuessGrid(boardIndex: index, maxAttempts: maxAttempts),
-          ),
+              children: [
+                boards[0],
+                const SizedBox(width: 12),
+                boards[1],
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                boards[2],
+                const SizedBox(width: 12),
+                boards[3],
+              ],
+            ),
+          ],
         );
-      }),
+      },
     );
   }
-}
+  }
+
 
 class _BoardPanel extends StatelessWidget {
   final String title;
@@ -311,7 +326,7 @@ class _BoardPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: AppColors.cardBg.withValues(alpha: 0.35),
         borderRadius: BorderRadius.circular(12),

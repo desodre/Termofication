@@ -10,11 +10,15 @@ import 'shake_widget.dart';
 class GuessGrid extends StatelessWidget {
   final int boardIndex;
   final int maxAttempts;
+  final double tileSize;
+  final double tilePadding;
 
   const GuessGrid({
     super.key,
     this.boardIndex = 0,
     this.maxAttempts = GameCubit.maxAttempts,
+    this.tileSize = 56.0,
+    this.tilePadding = 3.0,
   });
 
   @override
@@ -42,10 +46,11 @@ class GuessGrid extends StatelessWidget {
                   children: List.generate(wordLength, (col) {
                     final fb = result.feedback[col];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 3),
+                      padding: EdgeInsets.symmetric(horizontal: tilePadding),
                       child: LetterTile(
                         letter: fb.letter,
                         status: fb.status,
+                        size: tileSize,
                         animationDelay: Duration(milliseconds: col * 150),
                       ),
                     );
@@ -66,10 +71,11 @@ class GuessGrid extends StatelessWidget {
                       final letter =
                           col < currentGuess.length ? currentGuess[col] : '';
                       return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 3),
+                        padding: EdgeInsets.symmetric(horizontal: tilePadding),
                         child: LetterTile(
                           letter: letter,
                           status: LetterStatus.unknown,
+                          size: tileSize,
                         ),
                       );
                     }),
@@ -82,9 +88,9 @@ class GuessGrid extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(wordLength, (_) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 3),
-                      child: LetterTile(letter: ''),
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: tilePadding),
+                      child: LetterTile(letter: '', size: tileSize),
                     );
                   }),
                 ),
