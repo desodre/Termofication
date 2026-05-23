@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/network/api_client.dart';
 import 'core/theme/app_colors.dart';
 import 'features/auth/presentation/cubit/auth_cubit.dart';
-import 'features/game/data/datasources/game_remote_datasource.dart';
+import 'features/game/data/datasources/game_local_datasource.dart';
 import 'features/game/data/repositories/game_repository_impl.dart';
 import 'features/game/domain/usecases/get_random_word_usecase.dart';
 import 'features/game/domain/usecases/submit_guess_usecase.dart';
@@ -36,9 +36,8 @@ void main() async {
   );
 
   // Injeção de Dependências (Manual e Limpa)
-  final apiClient = ApiClient();
-  final remoteDataSource = GameRemoteDataSourceImpl(apiClient);
-  final repository = GameRepositoryImpl(remoteDataSource: remoteDataSource);
+  final localDataSource = GameLocalDataSourceImpl();
+  final repository = GameRepositoryImpl(localDataSource: localDataSource);
   final submitGuessUseCase = SubmitGuessUseCase(repository);
   final getRandomWordUseCase = GetRandomWordUseCase(repository);
 

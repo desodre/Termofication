@@ -148,17 +148,14 @@ class _KeyButtonState extends State<_KeyButton> {
           child: Row(
             children: [
               Expanded(child: Container(color: _getColor(widget.statuses[0]))),
-              Container(width: 2, color: dividerColor),
               Expanded(child: Container(color: _getColor(widget.statuses[1]))),
             ],
           ),
         ),
-        Container(height: 2, color: dividerColor),
         Expanded(
           child: Row(
             children: [
               Expanded(child: Container(color: _getColor(widget.statuses.length > 2 ? widget.statuses[2] : LetterStatus.unknown))),
-              Container(width: 2, color: dividerColor),
               Expanded(child: Container(color: _getColor(widget.statuses.length > 3 ? widget.statuses[3] : LetterStatus.unknown))),
             ],
           ),

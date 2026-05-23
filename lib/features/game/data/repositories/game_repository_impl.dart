@@ -3,36 +3,36 @@ import '../../domain/entities/challenge.dart';
 import '../../domain/entities/game_enums.dart';
 import '../../domain/entities/guess_result.dart';
 import '../../domain/repositories/game_repository.dart';
-import '../datasources/game_remote_datasource.dart';
+import '../datasources/game_local_datasource.dart';
 import '../models/guess_result_model.dart';
 
 class GameRepositoryImpl implements GameRepository {
-  final GameRemoteDataSource remoteDataSource;
+  final GameLocalDataSource localDataSource;
   final GetStorage storage;
 
   GameRepositoryImpl({
-    required this.remoteDataSource,
+    required this.localDataSource,
     GetStorage? storage,
   }) : storage = storage ?? GetStorage();
 
   @override
   Future<Challenge> getDailyChallenge({GameMode mode = GameMode.daily}) async {
-    return await remoteDataSource.getDailyChallenge(gameMode: mode.supabaseKey);
+    return await localDataSource.getDailyChallenge(gameMode: mode.supabaseKey);
   }
 
   @override
   Future<Challenge> getRandomChallenge({int length = 5}) async {
-    return await remoteDataSource.getRandomChallenge(length);
+    return await localDataSource.getRandomChallenge(length);
   }
 
   @override
   Future<GuessResult> submitGuess(String guess, int wordId) async {
-    return await remoteDataSource.submitGuess(guess, wordId);
+    return await localDataSource.submitGuess(guess, wordId);
   }
 
   @override
   Future<String> revealWord(int wordId) async {
-    return await remoteDataSource.revealWord(wordId);
+    return await localDataSource.revealWord(wordId);
   }
 
   @override

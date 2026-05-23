@@ -1,0 +1,265 @@
+import 'dart:io';
+import 'dart:math';
+import 'package:flutter/services.dart';
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
+import '../../../../core/network/api_client.dart';
+import '../models/challenge_model.dart';
+import '../models/guess_result_model.dart';
+import '../models/letter_feedback_model.dart';
+
+abstract class GameLocalDataSource {
+  Future<ChallengeModel> getDailyChallenge({String gameMode = 'TERMO'});
+  Future<ChallengeModel> getRandomChallenge(int length);
+  Future<GuessResultModel> submitGuess(String guess, int wordId);
+  Future<String> revealWord(int wordId);
+}
+
+class GameLocalDataSourceImpl implements GameLocalDataSource {
+  Database? _database;
+
+  Future<Database> _getDatabase() async {
+    if (_database != null) return _database!;
+
+    final databasesPath = await getDatabasesPath();
+    final path = join(databasesPath, "words.db");
+
+    // Check if the database exists
+    final exists = await databaseExists(path);
+
+    if (!exists) {
+      print("GameLocalDataSource: Copying words.db from assets to local app storage...");
+      try {
+        await Directory(dirname(path)).create(recursive: true);
+      } catch (_) {}
+
+      // Copy from asset
+      final data = await rootBundle.load("assets/words.db");
+      final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      
+      // Write to file
+      await File(path).writeAsBytes(bytes, flush: true);
+      print("GameLocalDataSource: Successfully copied words.db.");
+    } else {
+      print("GameLocalDataSource: Opening existing words.db database.");
+    }
+
+    _database = await openDatabase(path, readOnly: true);
+    return _database!;
+  }
+
+  List<Map<String, dynamic>> _evaluateGuess(String guess, String secret) {
+    final guessCleaned = guess.trim().toUpperCase();
+    final secretCleaned = secret.trim().toUpperCase();
+
+    final length = secretCleaned.length;
+    final List<String> feedbackStatuses = List.filled(length, 'absent');
+
+    // Count frequencies of letters in secret
+    final Map<String, int> secretCounts = {};
+    for (int i = 0; i < length; i++) {
+      final char = secretCleaned[i];
+      secretCounts[char] = (secretCounts[char] ?? 0) + 1;
+    }
+
+    // First pass: correct matches
+    for (int i = 0; i < length; i++) {
+      if (guessCleaned[i] == secretCleaned[i]) {
+        feedbackStatuses[i] = 'correct';
+        secretCounts[guessCleaned[i]] = secretCounts[guessCleaned[i]]! - 1;
+      }
+    }
+
+    // Second pass: present matches
+    for (int i = 0; i < length; i++) {
+      if (feedbackStatuses[i] != 'correct') {
+        final char = guessCleaned[i];
+        if ((secretCounts[char] ?? 0) > 0) {
+          feedbackStatuses[i] = 'present';
+          secretCounts[char] = secretCounts[char]! - 1;
+        }
+      }
+    }
+
+    return List.generate(length, (i) => {
+      'letter': guessCleaned[i],
+      'status': feedbackStatuses[i],
+    });
+  }
+
+  int _getDateSeed() {
+    final now = DateTime.now();
+    return now.year * 10000 + now.month * 100 + now.day;
+  }
+
+  @override
+  Future<ChallengeModel> getDailyChallenge({String gameMode = 'TERMO'}) async {
+    final db = await _getDatabase();
+    final expectedWordCount = _expectedWordCountForMode(gameMode);
+    
+    try {
+      // 1. Get all target words of length 5 ordered by ID
+      final List<Map<String, dynamic>> targetWords = await db.query(
+        'valid_words',
+        columns: ['id'],
+        where: 'length = ? AND is_target = 1',
+        whereArgs: [5],
+        orderBy: 'id ASC',
+      );
+
+      if (targetWords.length < expectedWordCount) {
+        throw ServerException('Palavras-alvo insuficientes no banco local.');
+      }
+
+      // 2. Deterministic dateseed based selection
+      final seed = _getDateSeed();
+      final rand = Random(seed);
+      
+      final selectedWordIds = <int>[];
+      while (selectedWordIds.length < expectedWordCount) {
+        final idx = rand.nextInt(targetWords.length);
+        final id = targetWords[idx]['id'] as int;
+        if (!selectedWordIds.contains(id)) {
+          selectedWordIds.add(id);
+        }
+      }
+
+      return ChallengeModel(
+        wordId: selectedWordIds.first,
+        length: 5,
+        wordIds: selectedWordIds,
+      );
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException('Falha ao gerar desafio diário local para $gameMode: $e');
+    }
+  }
+
+  @override
+  Future<ChallengeModel> getRandomChallenge(int length) async {
+    final db = await _getDatabase();
+    
+    try {
+      // Find all target words of the given length
+      final List<Map<String, dynamic>> targets = await db.query(
+        'valid_words',
+        columns: ['id'],
+        where: 'length = ? AND is_target = 1',
+        whereArgs: [length],
+        orderBy: 'id ASC',
+      );
+      
+      List<Map<String, dynamic>> finalList = targets;
+      if (targets.isEmpty) {
+        // Fallback to all words of that length
+        finalList = await db.query(
+          'valid_words',
+          columns: ['id'],
+          where: 'length = ?',
+          whereArgs: [length],
+          orderBy: 'id ASC',
+        );
+      }
+      
+      if (finalList.isEmpty) {
+        throw ServerException('Dicionário de palavras para o comprimento $length está vazio.');
+      }
+      
+      final randomIdx = Random().nextInt(finalList.length);
+      final wordId = finalList[randomIdx]['id'] as int;
+      
+      return ChallengeModel(
+        wordId: wordId,
+        length: length,
+        wordIds: [wordId],
+      );
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException('Erro ao buscar desafio aleatório local: $e');
+    }
+  }
+
+  @override
+  Future<GuessResultModel> submitGuess(String guess, int wordId) async {
+    final cleanGuess = guess.trim().toLowerCase();
+    final db = await _getDatabase();
+    
+    try {
+      // 1. Validate if word exists in local database (O(1) lookups via UNIQUE index on 'words')
+      final List<Map<String, dynamic>> dictCheck = await db.query(
+        'valid_words',
+        columns: ['id'],
+        where: 'words = ?',
+        whereArgs: [cleanGuess],
+      );
+      
+      if (dictCheck.isEmpty) {
+        throw InvalidWordException('"$guess" não é uma palavra válida no dicionário oficial do jogo.');
+      }
+      
+      // 2. Fetch target word text to perform evaluation
+      final List<Map<String, dynamic>> targetWordResp = await db.query(
+        'valid_words',
+        columns: ['words'],
+        where: 'id = ?',
+        whereArgs: [wordId],
+      );
+      
+      if (targetWordResp.isEmpty) {
+        throw ServerException('Palavra de referência inválida ou não encontrada no banco local.');
+      }
+      
+      final targetWord = targetWordResp.first['words'] as String;
+      
+      // 3. Evaluate matching statuses locally
+      final feedback = _evaluateGuess(cleanGuess, targetWord);
+      final isCorrect = cleanGuess.toUpperCase() == targetWord.toUpperCase();
+      
+      return GuessResultModel(
+        guess: cleanGuess,
+        isCorrect: isCorrect,
+        feedback: feedback
+            .map((f) => LetterFeedbackModel.fromJson(f))
+            .toList(),
+      );
+    } catch (e) {
+      if (e is InvalidWordException || e is ServerException) rethrow;
+      throw ServerException('Erro ao processar validação no banco local: $e');
+    }
+  }
+
+  @override
+  Future<String> revealWord(int wordId) async {
+    final db = await _getDatabase();
+    
+    try {
+      final List<Map<String, dynamic>> response = await db.query(
+        'valid_words',
+        columns: ['words'],
+        where: 'id = ?',
+        whereArgs: [wordId],
+      );
+      
+      if (response.isEmpty) {
+        throw ServerException('Palavra secreta não encontrada no banco local.');
+      }
+      
+      return response.first['words'] as String;
+    } catch (e) {
+      if (e is ServerException) rethrow;
+      throw ServerException('Erro ao revelar palavra secreta: $e');
+    }
+  }
+
+  int _expectedWordCountForMode(String gameMode) {
+    switch (gameMode.trim().toUpperCase()) {
+      case 'DUETO':
+        return 2;
+      case 'QUARTETO':
+        return 4;
+      default:
+        return 1;
+    }
+  }
+}
