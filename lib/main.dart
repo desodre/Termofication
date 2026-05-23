@@ -40,19 +40,21 @@ void main() async {
   final repository = GameRepositoryImpl(localDataSource: localDataSource);
   final submitGuessUseCase = SubmitGuessUseCase(repository);
   final getRandomWordUseCase = GetRandomWordUseCase(repository);
+  final authCubit = AuthCubit();
 
   runApp(
     MultiBlocProvider(
       providers: [
+        BlocProvider.value(
+          value: authCubit,
+        ),
         BlocProvider(
           create: (_) => GameCubit(
             submitGuessUseCase: submitGuessUseCase,
             getRandomWordUseCase: getRandomWordUseCase,
             repository: repository,
+            authCubit: authCubit,
           ),
-        ),
-        BlocProvider(
-          create: (_) => AuthCubit(),
         ),
       ],
       child: const TermoApp(),

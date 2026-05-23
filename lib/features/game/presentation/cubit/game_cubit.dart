@@ -1,5 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../auth/presentation/cubit/auth_cubit.dart';
+import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../domain/entities/game_enums.dart';
 import '../../domain/entities/guess_result.dart';
 import '../../domain/usecases/get_random_word_usecase.dart';
@@ -11,6 +13,7 @@ class GameCubit extends Cubit<GameState> {
   final SubmitGuessUseCase submitGuessUseCase;
   final GetRandomWordUseCase getRandomWordUseCase;
   final GameRepository repository;
+  final AuthCubit? authCubit;
 
   static const int maxAttempts = 6;
   static const int wordLength = 5;
@@ -31,6 +34,7 @@ class GameCubit extends Cubit<GameState> {
     required this.submitGuessUseCase,
     required this.getRandomWordUseCase,
     required this.repository,
+    this.authCubit,
   }) : super(const GameState());
 
   Future<void> startGame(GameMode mode) async {
@@ -268,6 +272,15 @@ class GameCubit extends Cubit<GameState> {
           wins++;
           streak++;
           await repository.saveInfiniteStats(wins: wins, losses: losses, streak: streak);
+
+          final authState = authCubit?.state;
+          if (authState is UserAuthAuthenticated) {
+            await repository.recordGame(
+              won: true,
+              attempts: attemptsUsed,
+              accessToken: authState.accessToken,
+            );
+          }
         }
       } else if (attemptsUsed >= attemptsLimit) {
         nextStatus = GameStatus.lost;
@@ -283,6 +296,15 @@ class GameCubit extends Cubit<GameState> {
           losses++;
           streak = 0;
           await repository.saveInfiniteStats(wins: wins, losses: losses, streak: streak);
+
+          final authState = authCubit?.state;
+          if (authState is UserAuthAuthenticated) {
+            await repository.recordGame(
+              won: false,
+              attempts: attemptsUsed,
+              accessToken: authState.accessToken,
+            );
+          }
         }
       }
 

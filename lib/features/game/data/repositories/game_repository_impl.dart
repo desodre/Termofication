@@ -1,4 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../../../core/network/api_client.dart';
 import '../../domain/entities/challenge.dart';
 import '../../domain/entities/game_enums.dart';
 import '../../domain/entities/guess_result.dart';
@@ -216,6 +218,30 @@ class GameRepositoryImpl implements GameRepository {
         return LetterStatus.correct;
       default:
         return LetterStatus.unknown;
+    }
+  }
+
+  @override
+  Future<void> recordGame({
+    required bool won,
+    required int attempts,
+    required String accessToken,
+  }) async {
+    try {
+      final dio = Dio();
+      await dio.post(
+        '${ApiClient.baseUrl}/api/v1/stats/record',
+        data: {
+          'won': won,
+          'attempts': attempts,
+        },
+        options: Options(
+          headers: {'Authorization': 'Bearer $accessToken'},
+        ),
+      );
+    } catch (e) {
+      print('Erro ao registrar estatísticas remotas no FastAPI: $e');
+      // Não re-lança o erro para não prejudicar a experiência do usuário se a rede falhar
     }
   }
 }

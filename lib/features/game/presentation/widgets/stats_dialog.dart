@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
+import '../../../../core/network/api_client.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
@@ -33,7 +34,7 @@ class _StatsDialogState extends State<StatsDialog> {
       try {
         final dio = Dio();
         final response = await dio.get(
-          'http://127.0.0.1:8000/api/v1/stats',
+          '${ApiClient.baseUrl}/api/v1/stats',
           options: Options(
             headers: {'Authorization': 'Bearer ${authState.accessToken}'},
           ),
