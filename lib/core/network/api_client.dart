@@ -3,7 +3,7 @@
 import 'package:dio/dio.dart';
 
 class ApiClient {
-  static const String baseUrl = 'http://127.0.0.1:8000';
+  static const String baseUrl = 'https://terminfication-api-943377901075.southamerica-east1.run.app';
 
   static String get _defaultBaseUrl {
     // URL de Produção hospedada no Google Cloud Run
