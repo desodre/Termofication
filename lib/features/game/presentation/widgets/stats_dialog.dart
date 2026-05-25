@@ -28,33 +28,48 @@ class _StatsDialogState extends State<StatsDialog> {
 
   Future<void> _fetchStats() async {
     final authState = context.read<AuthCubit>().state;
+    developer.log('StatsDialog: _fetchStats() initiated. authState = $authState', name: 'StatsDialog');
 
     if (authState is UserAuthAuthenticated) {
       try {
         final supabase = Supabase.instance.client;
+        final currentUser = supabase.auth.currentUser;
+        developer.log(
+          'StatsDialog: User is authenticated. authState.user.id = ${authState.user.id}, supabase.auth.currentUser.id = ${currentUser?.id}',
+          name: 'StatsDialog',
+        );
+        
+        developer.log('StatsDialog: Fetching user_stats from Supabase for user_id = ${authState.user.id}...', name: 'StatsDialog');
         final response = await supabase
             .from('user_stats')
             .select()
             .eq('user_id', authState.user.id)
             .maybeSingle();
 
+        developer.log('StatsDialog: Fetch user_stats response = $response', name: 'StatsDialog');
         if (response != null) {
           setState(() {
             _stats = response;
             _isLoading = false;
           });
         } else {
-          // Fallback if no stats exist in DB yet
+          developer.log('StatsDialog: No remote stats found (response is null). Triggering local fallback...', name: 'StatsDialog');
           _loadLocalStatsFallback();
         }
-      } catch (e) {
-        developer.log('Falha ao sincronizar estatísticas remotas: $e');
+      } catch (e, st) {
+        developer.log(
+          'StatsDialog: ERROR fetching remote stats: $e',
+          error: e,
+          stackTrace: st,
+          name: 'StatsDialog',
+        );
         setState(() {
           _errorMessage = 'Falha ao sincronizar estatísticas remotas.';
           _isLoading = false;
         });
       }
     } else {
+      developer.log('StatsDialog: User is NOT authenticated. Triggering local fallback...', name: 'StatsDialog');
       _loadLocalStatsFallback();
     }
   }
@@ -64,6 +79,11 @@ class _StatsDialogState extends State<StatsDialog> {
     final int wins = storage.read<int>('infinite_wins') ?? 0;
     final int losses = storage.read<int>('infinite_losses') ?? 0;
     final int streak = storage.read<int>('infinite_streak') ?? 0;
+    
+    developer.log(
+      'StatsDialog: Loaded local fallback stats -> wins=$wins, losses=$losses, streak=$streak',
+      name: 'StatsDialog',
+    );
 
     if (mounted) {
       setState(() {
