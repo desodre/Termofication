@@ -166,7 +166,6 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
   @override
   Future<ChallengeModel> getDailyChallenge({String gameMode = 'TERMO'}) async {
     final db = await _getDatabase();
-    final expectedWordCount = _expectedWordCountForMode(gameMode);
 
     try {
       // 1. Get all target words of length 5 ordered by ID
@@ -178,7 +177,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
         orderBy: 'id ASC',
       );
 
-      if (targetWords.length < expectedWordCount) {
+      if (targetWords.length < 7) {
         throw ServerException('Palavras-alvo insuficientes no banco local.');
       }
 
@@ -186,13 +185,25 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       final seed = _getDateSeed();
       final rand = Random(seed);
 
-      final selectedWordIds = <int>[];
-      while (selectedWordIds.length < expectedWordCount) {
+      // Sorteia as 7 palavras exclusivas do dia garantindo unicidade
+      final dailyWordIds = <int>[];
+      while (dailyWordIds.length < 7) {
         final idx = rand.nextInt(targetWords.length);
         final id = targetWords[idx]['id'] as int;
-        if (!selectedWordIds.contains(id)) {
-          selectedWordIds.add(id);
+        if (!dailyWordIds.contains(id)) {
+          dailyWordIds.add(id);
         }
+      }
+
+      // Distribuição por modo de jogo
+      final String mode = gameMode.trim().toUpperCase();
+      List<int> selectedWordIds;
+      if (mode == 'DUETO') {
+        selectedWordIds = dailyWordIds.sublist(1, 3);
+      } else if (mode == 'QUARTETO') {
+        selectedWordIds = dailyWordIds.sublist(3, 7);
+      } else { // TERMO
+        selectedWordIds = dailyWordIds.sublist(0, 1);
       }
 
       return ChallengeModel(
