@@ -1,8 +1,8 @@
 import 'dart:ui';
+import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:dio/dio.dart';
-import '../../../../core/network/api_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
@@ -30,32 +30,42 @@ class _StatsDialogState extends State<StatsDialog> {
     final authState = context.read<AuthCubit>().state;
 
     if (authState is UserAuthAuthenticated) {
-      // Busca estatísticas do FastAPI
       try {
-        final dio = Dio();
-        final response = await dio.get(
-          '${ApiClient.baseUrl}/api/v1/stats',
-          options: Options(
-            headers: {'Authorization': 'Bearer ${authState.accessToken}'},
-          ),
-        );
-        setState(() {
-          _stats = response.data as Map<String, dynamic>;
-          _isLoading = false;
-        });
+        final supabase = Supabase.instance.client;
+        final response = await supabase
+            .from('user_stats')
+            .select()
+            .eq('user_id', authState.user.id)
+            .maybeSingle();
+
+        if (response != null) {
+          setState(() {
+            _stats = response;
+            _isLoading = false;
+          });
+        } else {
+          // Fallback if no stats exist in DB yet
+          _loadLocalStatsFallback();
+        }
       } catch (e) {
+        developer.log('Falha ao sincronizar estatísticas remotas: $e');
         setState(() {
           _errorMessage = 'Falha ao sincronizar estatísticas remotas.';
           _isLoading = false;
         });
       }
     } else {
-      // Busca estatísticas locais do GetStorage (Modo Anônimo)
-      final storage = GetStorage();
-      final int wins = storage.read<int>('infinite_wins') ?? 0;
-      final int losses = storage.read<int>('infinite_losses') ?? 0;
-      final int streak = storage.read<int>('infinite_streak') ?? 0;
+      _loadLocalStatsFallback();
+    }
+  }
 
+  void _loadLocalStatsFallback() {
+    final storage = GetStorage();
+    final int wins = storage.read<int>('infinite_wins') ?? 0;
+    final int losses = storage.read<int>('infinite_losses') ?? 0;
+    final int streak = storage.read<int>('infinite_streak') ?? 0;
+
+    if (mounted) {
       setState(() {
         _stats = {
           "games_played": wins + losses,
