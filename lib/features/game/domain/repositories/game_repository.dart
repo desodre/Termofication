@@ -35,6 +35,5 @@ abstract class GameRepository {
   Future<void> recordGame({
     required bool won,
     required int attempts,
-    required String accessToken,
   });
 }

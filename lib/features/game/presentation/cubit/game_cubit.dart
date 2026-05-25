@@ -181,7 +181,11 @@ class GameCubit extends Cubit<GameState> {
     final challenge = await getRandomWordUseCase(length: wordLength);
     
     if (authCubit?.state is UserAuthAuthenticated) {
-      await repository.syncInfiniteStats();
+      try {
+        await repository.syncInfiniteStats();
+      } catch (e) {
+        emit(state.copyWith(errorMessage: 'Aviso: Falha ao sincronizar estatísticas da nuvem.'));
+      }
     }
     
     final stats = await repository.getInfiniteStats();
@@ -376,11 +380,14 @@ class GameCubit extends Cubit<GameState> {
 
           final authState = authCubit?.state;
           if (authState is UserAuthAuthenticated) {
-            await repository.recordGame(
-              won: true,
-              attempts: attemptsUsed,
-              accessToken: authState.accessToken,
-            );
+            try {
+              await repository.recordGame(
+                won: true,
+                attempts: attemptsUsed,
+              );
+            } catch (e) {
+              emit(state.copyWith(errorMessage: 'Aviso: Falha ao sincronizar estatísticas da nuvem.'));
+            }
           }
         }
       } else if (attemptsUsed >= attemptsLimit) {
@@ -404,11 +411,14 @@ class GameCubit extends Cubit<GameState> {
 
           final authState = authCubit?.state;
           if (authState is UserAuthAuthenticated) {
-            await repository.recordGame(
-              won: false,
-              attempts: attemptsUsed,
-              accessToken: authState.accessToken,
-            );
+            try {
+              await repository.recordGame(
+                won: false,
+                attempts: attemptsUsed,
+              );
+            } catch (e) {
+              emit(state.copyWith(errorMessage: 'Aviso: Falha ao sincronizar estatísticas da nuvem.'));
+            }
           }
         }
       }

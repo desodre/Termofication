@@ -100,10 +100,8 @@ class MockGameRepository implements GameRepository {
   Future<void> recordGame({
     required bool won,
     required int attempts,
-    required String accessToken,
-  }) {
-    // TODO: implement recordGame
-    throw UnimplementedError();
+  }) async {
+    // Apenas simula sucesso
   }
 }
 

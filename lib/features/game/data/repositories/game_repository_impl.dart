@@ -1,6 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_storage/get_storage.dart';
-import 'dart:developer';
 import '../../domain/entities/challenge.dart';
 import '../../domain/entities/game_enums.dart';
 import '../../domain/entities/guess_result.dart';
@@ -234,29 +233,25 @@ class GameRepositoryImpl implements GameRepository {
 
   @override
   Future<void> syncInfiniteStats() async {
-    try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return;
-      
-      final response = await supabase
-          .from('user_stats')
-          .select()
-          .eq('user_id', user.id)
-          .maybeSingle();
-          
-      if (response != null) {
-        final played = response['games_played'] as int? ?? 0;
-        final wins = response['games_won'] as int? ?? 0;
-        final losses = played - wins;
-        final streak = response['current_streak'] as int? ?? 0;
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+    
+    final response = await supabase
+        .from('user_stats')
+        .select()
+        .eq('user_id', user.id)
+        .maybeSingle();
         
-        await storage.write('infinite_wins', wins);
-        await storage.write('infinite_losses', losses);
-        await storage.write('infinite_streak', streak);
-      }
-    } catch (e) {
-      log('Erro ao sincronizar stats remotas do Supabase: $e');
+    if (response != null) {
+      final played = response['games_played'] as int? ?? 0;
+      final wins = response['games_won'] as int? ?? 0;
+      final losses = played - wins;
+      final streak = response['current_streak'] as int? ?? 0;
+      
+      await storage.write('infinite_wins', wins);
+      await storage.write('infinite_losses', losses);
+      await storage.write('infinite_streak', streak);
     }
   }
 
@@ -264,50 +259,49 @@ class GameRepositoryImpl implements GameRepository {
   Future<void> recordGame({
     required bool won,
     required int attempts,
-    required String accessToken,
   }) async {
-    try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      if (user == null) return;
-      
-      final wins = storage.read<int>('infinite_wins') ?? 0;
-      final losses = storage.read<int>('infinite_losses') ?? 0;
-      final streak = storage.read<int>('infinite_streak') ?? 0;
-      final gamesPlayed = wins + losses;
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+    
+    final response = await supabase
+        .from('user_stats')
+        .select()
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      final response = await supabase
-          .from('user_stats')
-          .select()
-          .eq('user_id', user.id)
-          .maybeSingle();
+    int gamesPlayed = (response?['games_played'] as int?) ?? 0;
+    int gamesWon = (response?['games_won'] as int?) ?? 0;
+    int currentStreak = (response?['current_streak'] as int?) ?? 0;
+    int maxStreak = (response?['max_streak'] as int?) ?? 0;
+    Map<String, dynamic> guessDist = response?['guess_distribution'] as Map<String, dynamic>? ?? {};
 
-      int maxStreak = (response?['max_streak'] as int?) ?? 0;
-      Map<String, dynamic> guessDist = response?['guess_distribution'] as Map<String, dynamic>? ?? {};
-
-      if (streak > maxStreak) {
-        maxStreak = streak;
+    gamesPlayed++;
+    if (won) {
+      gamesWon++;
+      currentStreak++;
+      if (currentStreak > maxStreak) {
+        maxStreak = currentStreak;
       }
-      
-      if (won) {
-        final key = attempts.toString();
-        guessDist[key] = (guessDist[key] as int? ?? 0) + 1;
-      }
-
-      await supabase.from('user_stats').upsert({
-        'user_id': user.id,
-        'games_played': gamesPlayed,
-        'games_won': wins,
-        'current_streak': streak,
-        'max_streak': maxStreak,
-        'guess_distribution': guessDist,
-      });
-    } catch (e) {
-      log(
-        'Erro ao registrar estatísticas remotas no Supabase: $e',
-        name: 'GameRepositoryImpl',
-        error: e,
-      );
+      final key = attempts.toString();
+      guessDist[key] = (guessDist[key] as int? ?? 0) + 1;
+    } else {
+      currentStreak = 0;
     }
+
+    await supabase.from('user_stats').upsert({
+      'user_id': user.id,
+      'games_played': gamesPlayed,
+      'games_won': gamesWon,
+      'current_streak': currentStreak,
+      'max_streak': maxStreak,
+      'guess_distribution': guessDist,
+    });
+
+    // Sobrescreve o local com a nova verdade remota
+    final losses = gamesPlayed - gamesWon;
+    await storage.write('infinite_wins', gamesWon);
+    await storage.write('infinite_losses', losses);
+    await storage.write('infinite_streak', currentStreak);
   }
 }
