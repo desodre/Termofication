@@ -67,7 +67,7 @@ flutter:
   assets:
     - .env
     - assets/words.db
-    - assets/icons/Google _G_ Logo.svg
+    - assets/icons/Google _G_ Logo.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

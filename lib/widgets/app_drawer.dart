@@ -415,13 +415,29 @@ class _UnauthenticatedSection extends StatelessWidget {
                 context.read<AuthCubit>().loginWithGoogle();
               },
               icon: const Icon(Icons.login_rounded, size: 18),
-              label: const Text(
-                'ENTRAR COM GOOGLE',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1,
-                ),
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'ENTRAR COM GOOGLE',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('assets/icons/Google _G_ Logo.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
