@@ -92,7 +92,10 @@ class AppDrawer extends StatelessWidget {
 
                 // ── Divider sutil ──
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   child: Container(
                     height: 1,
                     decoration: BoxDecoration(
@@ -139,7 +142,10 @@ class AppDrawer extends StatelessWidget {
 
                 // ── Divider ──
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
                   child: Container(
                     height: 1,
                     decoration: BoxDecoration(
@@ -198,7 +204,10 @@ class AppDrawer extends StatelessWidget {
                           // TODO: Navegar para tela de configurações
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('Configurações em breve!', style: .new(color: AppColors.textWhite),),
+                              content: const Text(
+                                'Configurações em breve!',
+                                style: .new(color: AppColors.textWhite),
+                              ),
                               backgroundColor: AppColors.absent,
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
@@ -242,7 +251,8 @@ class _AuthenticatedSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarUrl = state.user.userMetadata?['avatar_url'] as String?;
-    final fullName = state.user.userMetadata?['full_name'] as String? ?? 'Jogador';
+    final fullName =
+        state.user.userMetadata?['full_name'] as String? ?? 'Jogador';
     final email = state.user.email ?? '';
 
     return Container(
@@ -261,12 +271,16 @@ class _AuthenticatedSection extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundImage:
-                    avatarUrl != null ? NetworkImage(avatarUrl) : null,
+                backgroundImage: avatarUrl != null
+                    ? NetworkImage(avatarUrl)
+                    : null,
                 backgroundColor: AppColors.correct.withValues(alpha: 0.2),
                 child: avatarUrl == null
-                    ? const Icon(Icons.person_rounded,
-                        size: 22, color: AppColors.textWhite)
+                    ? const Icon(
+                        Icons.person_rounded,
+                        size: 22,
+                        color: AppColors.textWhite,
+                      )
                     : null,
               ),
               const SizedBox(width: 12),
@@ -441,10 +455,7 @@ class _UnauthenticatedSection extends StatelessWidget {
               ),
               child: const Text(
                 'Jogar Anônimo',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: AppColors.textGray,
-                ),
+                style: TextStyle(fontSize: 12, color: AppColors.textGray),
               ),
             ),
           ),
@@ -501,11 +512,7 @@ class _DrawerNavItemState extends State<_DrawerNavItem> {
                 color: widget.themeColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(
-                widget.icon,
-                color: widget.themeColor,
-                size: 20,
-              ),
+              child: Icon(widget.icon, color: widget.themeColor, size: 20),
             ),
             const SizedBox(width: 14),
             Expanded(

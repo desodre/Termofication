@@ -23,14 +23,14 @@ class LetterTile extends StatefulWidget {
 class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
   late AnimationController _flipController;
   late Animation<double> _flipAnimation;
-  
+
   late AnimationController _popController;
   late Animation<double> _popAnimation;
 
   @override
   void initState() {
     super.initState();
-    
+
     // Flip Animation (3D Y-Axis Rotation)
     _flipController = AnimationController(
       duration: const Duration(milliseconds: 550),
@@ -47,11 +47,17 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
     );
     _popAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.0, end: 1.15).chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 1.15,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 50,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.15, end: 1.0).chain(CurveTween(curve: Curves.easeIn)),
+        tween: Tween<double>(
+          begin: 1.15,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeIn)),
         weight: 50,
       ),
     ]).animate(_popController);
@@ -67,19 +73,23 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
     super.didUpdateWidget(oldWidget);
 
     // 1. Trigger Flip animation when status changes from unknown to correct/present/absent
-    if (oldWidget.status == LetterStatus.unknown && widget.status != LetterStatus.unknown) {
+    if (oldWidget.status == LetterStatus.unknown &&
+        widget.status != LetterStatus.unknown) {
       Future.delayed(widget.animationDelay ?? Duration.zero, () {
         if (mounted) {
           _flipController.forward(from: 0.0);
         }
       });
-    } 
+    }
     // 2. Trigger Typing Pop when a letter is newly entered
-    else if (oldWidget.letter.isEmpty && widget.letter.isNotEmpty && widget.status == LetterStatus.unknown) {
+    else if (oldWidget.letter.isEmpty &&
+        widget.letter.isNotEmpty &&
+        widget.status == LetterStatus.unknown) {
       _popController.forward(from: 0.0);
     }
     // 3. Reset state if status changes back to unknown (e.g. game restart)
-    else if (widget.status == LetterStatus.unknown && oldWidget.status != LetterStatus.unknown) {
+    else if (widget.status == LetterStatus.unknown &&
+        oldWidget.status != LetterStatus.unknown) {
       _flipController.value = 0.0;
     }
   }
@@ -98,10 +108,12 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
       builder: (context, child) {
         final flipVal = _flipAnimation.value;
         final isFront = flipVal <= 0.5;
-        
+
         // 3D rotation angle
-        final angle = isFront ? flipVal * 3.141592653589793 : (1.0 - flipVal) * 3.141592653589793;
-        
+        final angle = isFront
+            ? flipVal * 3.141592653589793
+            : (1.0 - flipVal) * 3.141592653589793;
+
         // Effective status based on whether we are front or back during the flip
         final currentStatus = isFront ? LetterStatus.unknown : widget.status;
 
@@ -144,10 +156,7 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: borderColor,
-                  width: 2,
-                ),
+                border: Border.all(color: borderColor, width: 2),
                 boxShadow: currentStatus != LetterStatus.unknown
                     ? [
                         BoxShadow(

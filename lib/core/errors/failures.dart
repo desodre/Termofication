@@ -4,13 +4,19 @@ abstract class Failure {
 }
 
 class ServerFailure extends Failure {
-  const ServerFailure([super.message = 'Erro no servidor. Tente novamente mais tarde.']);
+  const ServerFailure([
+    super.message = 'Erro no servidor. Tente novamente mais tarde.',
+  ]);
 }
 
 class NetworkFailure extends Failure {
-  const NetworkFailure([super.message = 'Sem conexão com a internet. Verifique sua rede.']);
+  const NetworkFailure([
+    super.message = 'Sem conexão com a internet. Verifique sua rede.',
+  ]);
 }
 
 class InvalidWordFailure extends Failure {
-  const InvalidWordFailure([super.message = 'Palavra inválida ou não encontrada no dicionário.']);
+  const InvalidWordFailure([
+    super.message = 'Palavra inválida ou não encontrada no dicionário.',
+  ]);
 }

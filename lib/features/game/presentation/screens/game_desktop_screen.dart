@@ -100,7 +100,10 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
                     padding: const EdgeInsets.only(right: 16),
                     child: Center(
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.present.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
@@ -128,7 +131,8 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
         ),
         body: BlocListener<GameCubit, GameState>(
           listenWhen: (previous, current) {
-            return previous.status != current.status || previous.errorMessage != current.errorMessage;
+            return previous.status != current.status ||
+                previous.errorMessage != current.errorMessage;
           },
           listener: (context, state) {
             // Display floating toast for errors
@@ -137,8 +141,11 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
             }
 
             // Detect Game Over to trigger the Dialog
-            final hasFinished = state.status == GameStatus.won || state.status == GameStatus.lost;
-            final wasPlaying = _lastStatus == GameStatus.playing ||
+            final hasFinished =
+                state.status == GameStatus.won ||
+                state.status == GameStatus.lost;
+            final wasPlaying =
+                _lastStatus == GameStatus.playing ||
                 _lastStatus == GameStatus.submitting ||
                 _lastStatus == GameStatus.loading;
 
@@ -157,7 +164,9 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
               }
 
               final attemptsLimit = GameCubit.maxAttemptsForMode(state.mode);
-              final isGameOver = state.status == GameStatus.won || state.status == GameStatus.lost;
+              final isGameOver =
+                  state.status == GameStatus.won ||
+                  state.status == GameStatus.lost;
 
               return Column(
                 children: [
@@ -186,17 +195,25 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
                             icon: const Icon(Icons.analytics_rounded),
                             label: const Text(
                               'VER RESULTADOS & ESTATÍSTICAS',
-                              style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.correct,
                               foregroundColor: AppColors.textWhite,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 4,
-                              shadowColor: AppColors.correct.withValues(alpha: 0.3),
+                              shadowColor: AppColors.correct.withValues(
+                                alpha: 0.3,
+                              ),
                             ),
                           ),
                         ),
@@ -248,9 +265,9 @@ class _BoardsLayout extends StatelessWidget {
         }
 
         final maxBoardWidth = (availableWidth - 12) / 2;
-        final innerWidth = maxBoardWidth - 20; 
+        final innerWidth = maxBoardWidth - 20;
         double tileSize = (innerWidth - 30) / 5;
-        
+
         tileSize = tileSize.clamp(20.0, 56.0);
 
         final exactBoardWidth = (tileSize * 5) + 30 + 20;
@@ -275,11 +292,7 @@ class _BoardsLayout extends StatelessWidget {
           return Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              boards[0],
-              const SizedBox(width: 12),
-              boards[1],
-            ],
+            children: [boards[0], const SizedBox(width: 12), boards[1]],
           );
         }
 
@@ -288,29 +301,20 @@ class _BoardsLayout extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                boards[0],
-                const SizedBox(width: 12),
-                boards[1],
-              ],
+              children: [boards[0], const SizedBox(width: 12), boards[1]],
             ),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                boards[2],
-                const SizedBox(width: 12),
-                boards[3],
-              ],
+              children: [boards[2], const SizedBox(width: 12), boards[3]],
             ),
           ],
         );
       },
     );
   }
-  }
-
+}
 
 class _BoardPanel extends StatelessWidget {
   final String title;
@@ -353,7 +357,11 @@ class _BoardPanel extends StatelessWidget {
               ),
               if (completed) ...[
                 const SizedBox(width: 6),
-                const Icon(Icons.check_circle, color: AppColors.correct, size: 16),
+                const Icon(
+                  Icons.check_circle,
+                  color: AppColors.correct,
+                  size: 16,
+                ),
               ],
             ],
           ),
@@ -369,17 +377,15 @@ class _ResultDialog extends StatelessWidget {
   final GameState state;
   final BuildContext parentContext;
 
-  const _ResultDialog({
-    required this.state,
-    required this.parentContext,
-  });
+  const _ResultDialog({required this.state, required this.parentContext});
 
   @override
   Widget build(BuildContext context) {
     final won = state.status == GameStatus.won;
     final attemptsLimit = GameCubit.maxAttemptsForMode(state.mode);
-    final usedAttempts =
-        state.boardGuesses.isNotEmpty ? state.boardGuesses.first.length : 0;
+    final usedAttempts = state.boardGuesses.isNotEmpty
+        ? state.boardGuesses.first.length
+        : 0;
 
     return BackdropFilter(
       filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
@@ -400,10 +406,12 @@ class _ResultDialog extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: (won ? AppColors.correct : Colors.redAccent).withValues(alpha: 0.15),
+                color: (won ? AppColors.correct : Colors.redAccent).withValues(
+                  alpha: 0.15,
+                ),
                 blurRadius: 30,
                 offset: const Offset(0, 10),
-              )
+              ),
             ],
           ),
           padding: const EdgeInsets.all(28),
@@ -415,15 +423,19 @@ class _ResultDialog extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: (won ? AppColors.correct : Colors.redAccent).withValues(alpha: 0.15),
+                  color: (won ? AppColors.correct : Colors.redAccent)
+                      .withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: (won ? AppColors.correct : Colors.redAccent).withValues(alpha: 0.4),
+                    color: (won ? AppColors.correct : Colors.redAccent)
+                        .withValues(alpha: 0.4),
                     width: 2,
                   ),
                 ),
                 child: Icon(
-                  won ? Icons.emoji_events_rounded : Icons.sentiment_very_dissatisfied_rounded,
+                  won
+                      ? Icons.emoji_events_rounded
+                      : Icons.sentiment_very_dissatisfied_rounded,
                   color: won ? AppColors.correct : Colors.redAccent,
                   size: 32,
                 ),
@@ -449,13 +461,19 @@ class _ResultDialog extends StatelessWidget {
                       ? 'Você completou todos os tabuleiros!'
                       : 'Você desvendou a palavra secreta!',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: AppColors.textWhite.withValues(alpha: 0.9), fontSize: 15),
+                  style: TextStyle(
+                    color: AppColors.textWhite.withValues(alpha: 0.9),
+                    fontSize: 15,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Acertou em $usedAttempts de $attemptsLimit tentativas.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textGray, fontSize: 13),
+                  style: const TextStyle(
+                    color: AppColors.textGray,
+                    fontSize: 13,
+                  ),
                 ),
               ] else ...[
                 const Text(
@@ -473,33 +491,38 @@ class _ResultDialog extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 8,
                   alignment: WrapAlignment.center,
-                  children: (state.targetWords.isNotEmpty
-                          ? state.targetWords
-                          : [state.targetWord])
-                      .where((w) => w.isNotEmpty)
-                      .map(
-                        (word) => Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppColors.present.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppColors.present.withValues(alpha: 0.5),
+                  children:
+                      (state.targetWords.isNotEmpty
+                              ? state.targetWords
+                              : [state.targetWord])
+                          .where((w) => w.isNotEmpty)
+                          .map(
+                            (word) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.present.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: AppColors.present.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                word.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  color: AppColors.present,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 2,
+                                ),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            word.toUpperCase(),
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: AppColors.present,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 2,
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                          )
+                          .toList(),
                 ),
               ],
 
@@ -511,8 +534,16 @@ class _ResultDialog extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _StatItem(label: 'Vitórias', value: '${state.infiniteWins}', icon: Icons.check_circle_outline),
-                    _StatItem(label: 'Derrotas', value: '${state.infiniteLosses}', icon: Icons.highlight_off),
+                    _StatItem(
+                      label: 'Vitórias',
+                      value: '${state.infiniteWins}',
+                      icon: Icons.check_circle_outline,
+                    ),
+                    _StatItem(
+                      label: 'Derrotas',
+                      value: '${state.infiniteLosses}',
+                      icon: Icons.highlight_off,
+                    ),
                     _StatItem(
                       label: 'Sequência',
                       value: '${state.infiniteStreak} 🔥',
@@ -536,14 +567,24 @@ class _ResultDialog extends StatelessWidget {
                       child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.pop(context); // Close dialog
-                          parentContext.read<GameCubit>().startGame(state.mode); // Restart
+                          parentContext.read<GameCubit>().startGame(
+                            state.mode,
+                          ); // Restart
                         },
                         icon: const Icon(Icons.replay_rounded),
-                        label: const Text('NOVA PALAVRA', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                        label: const Text(
+                          'NOVA PALAVRA',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.correct,
                           foregroundColor: AppColors.textWhite,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           elevation: 2,
                         ),
                       ),
@@ -556,11 +597,17 @@ class _ResultDialog extends StatelessWidget {
                         child: SizedBox(
                           height: 46,
                           child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context), // Close dialog to inspect grid
+                            onPressed: () => Navigator.pop(
+                              context,
+                            ), // Close dialog to inspect grid
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppColors.borderActive),
+                              side: const BorderSide(
+                                color: AppColors.borderActive,
+                              ),
                               foregroundColor: AppColors.textWhite,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             child: const Text('TABULEIRO'),
                           ),
@@ -576,9 +623,13 @@ class _ResultDialog extends StatelessWidget {
                               Navigator.pop(parentContext); // Exit game
                             },
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppColors.borderActive),
+                              side: const BorderSide(
+                                color: AppColors.borderActive,
+                              ),
                               foregroundColor: AppColors.textWhite,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             child: const Text('MENU INICIAL'),
                           ),

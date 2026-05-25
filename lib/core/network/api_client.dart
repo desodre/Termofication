@@ -3,11 +3,13 @@
 import 'package:dio/dio.dart';
 
 class ApiClient {
-  static const String baseUrl = 'https://terminfication-api-943377901075.southamerica-east1.run.app';
+  static const String baseUrl =
+      'https://terminfication-api-943377901075.southamerica-east1.run.app';
 
   static String get _defaultBaseUrl {
     // URL de Produção hospedada no Google Cloud Run
-    const productionUrl = 'https://terminfication-api-943377901075.southamerica-east1.run.app';
+    const productionUrl =
+        'https://terminfication-api-943377901075.southamerica-east1.run.app';
 
     // Para forçar a produção em todos os testes, apenas comente o bloco de debug abaixo:
     // if (!kReleaseMode) {
@@ -24,22 +26,22 @@ class ApiClient {
   final Dio _dio;
 
   ApiClient({String? baseUrl, Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                baseUrl: baseUrl ?? _defaultBaseUrl,
-                connectTimeout: const Duration(seconds: 10),
-                receiveTimeout: const Duration(seconds: 10),
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                },
-              ),
-            ) {
-    _dio.interceptors.add(LogInterceptor(
-      requestBody: true,
-      responseBody: true,
-    ));
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              baseUrl: baseUrl ?? _defaultBaseUrl,
+              connectTimeout: const Duration(seconds: 10),
+              receiveTimeout: const Duration(seconds: 10),
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+              },
+            ),
+          ) {
+    _dio.interceptors.add(
+      LogInterceptor(requestBody: true, responseBody: true),
+    );
   }
 
   Future<Response<T>> get<T>(
@@ -96,7 +98,9 @@ class ApiClient {
           }
         }
         if (statusCode == 422) {
-          return InvalidWordException(detailMsg ?? 'Palavra inválida ou de tamanho incorreto.');
+          return InvalidWordException(
+            detailMsg ?? 'Palavra inválida ou de tamanho incorreto.',
+          );
         }
         return ServerException(detailMsg ?? 'Erro no servidor ($statusCode).');
       default:

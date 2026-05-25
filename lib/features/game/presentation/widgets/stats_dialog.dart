@@ -28,7 +28,7 @@ class _StatsDialogState extends State<StatsDialog> {
 
   Future<void> _fetchStats() async {
     final authState = context.read<AuthCubit>().state;
-    
+
     if (authState is UserAuthAuthenticated) {
       // Busca estatísticas do FastAPI
       try {
@@ -55,14 +55,21 @@ class _StatsDialogState extends State<StatsDialog> {
       final int wins = storage.read<int>('infinite_wins') ?? 0;
       final int losses = storage.read<int>('infinite_losses') ?? 0;
       final int streak = storage.read<int>('infinite_streak') ?? 0;
-      
+
       setState(() {
         _stats = {
           "games_played": wins + losses,
           "games_won": wins,
           "current_streak": streak,
           "max_streak": streak,
-          "guess_distribution": {"1": 0, "2": 0, "3": 0, "4": 0, "5": 0, "6": 0}
+          "guess_distribution": {
+            "1": 0,
+            "2": 0,
+            "3": 0,
+            "4": 0,
+            "5": 0,
+            "6": 0,
+          },
         };
         _isLoading = false;
       });
@@ -76,9 +83,11 @@ class _StatsDialogState extends State<StatsDialog> {
     final gamesWon = _stats['games_won'] as int? ?? 0;
     final currentStreak = _stats['current_streak'] as int? ?? 0;
     final maxStreak = _stats['max_streak'] as int? ?? 0;
-    
-    final winPercentage = gamesPlayed > 0 ? ((gamesWon / gamesPlayed) * 100).round() : 0;
-    
+
+    final winPercentage = gamesPlayed > 0
+        ? ((gamesWon / gamesPlayed) * 100).round()
+        : 0;
+
     // Encontra valor máximo para escalonar o gráfico de barras
     int maxBarValue = 1;
     dist.forEach((key, val) {
@@ -113,13 +122,15 @@ class _StatsDialogState extends State<StatsDialog> {
                 color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 30,
                 offset: const Offset(0, 10),
-              )
+              ),
             ],
           ),
           child: _isLoading
               ? const SizedBox(
                   height: 200,
-                  child: Center(child: CircularProgressIndicator(color: AppColors.correct)),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.correct),
+                  ),
                 )
               : Column(
                   mainAxisSize: MainAxisSize.min,
@@ -137,21 +148,27 @@ class _StatsDialogState extends State<StatsDialog> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.close_rounded, color: AppColors.textGray),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: AppColors.textGray,
+                          ),
                           onPressed: () => Navigator.pop(context),
-                        )
+                        ),
                       ],
                     ),
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 12),
                       Text(
                         _errorMessage!,
-                        style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 13,
+                        ),
                         textAlign: TextAlign.center,
                       ),
                     ],
                     const SizedBox(height: 24),
-                    
+
                     // Grid de estatísticas gerais
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -163,7 +180,7 @@ class _StatsDialogState extends State<StatsDialog> {
                       ],
                     ),
                     const SizedBox(height: 32),
-                    
+
                     const Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
@@ -177,13 +194,17 @@ class _StatsDialogState extends State<StatsDialog> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    
+
                     // Gráfico de Barras Horizontal
                     ...List.generate(6, (index) {
                       final attemptNum = '${index + 1}';
-                      final count = int.tryParse(dist[attemptNum]?.toString() ?? '0') ?? 0;
-                      final ratio = maxBarValue > 0 ? (count / maxBarValue) : 0.0;
-                      
+                      final count =
+                          int.tryParse(dist[attemptNum]?.toString() ?? '0') ??
+                          0;
+                      final ratio = maxBarValue > 0
+                          ? (count / maxBarValue)
+                          : 0.0;
+
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
@@ -201,19 +222,25 @@ class _StatsDialogState extends State<StatsDialog> {
                               child: LayoutBuilder(
                                 builder: (context, constraints) {
                                   final maxWidth = constraints.maxWidth;
-                                  final barWidth = ratio == 0.0 
+                                  final barWidth = ratio == 0.0
                                       ? 28.0 // largura mínima para renderizar o número 0
                                       : (maxWidth - 20) * ratio;
-                                  
+
                                   return Align(
                                     alignment: Alignment.centerLeft,
                                     child: AnimatedContainer(
-                                      duration: const Duration(milliseconds: 600),
+                                      duration: const Duration(
+                                        milliseconds: 600,
+                                      ),
                                       curve: Curves.fastOutSlowIn,
                                       width: barWidth,
                                       height: 20,
                                       decoration: BoxDecoration(
-                                        color: ratio > 0.0 ? AppColors.correct : AppColors.textGray.withValues(alpha: 0.3),
+                                        color: ratio > 0.0
+                                            ? AppColors.correct
+                                            : AppColors.textGray.withValues(
+                                                alpha: 0.3,
+                                              ),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       alignment: Alignment.centerRight,
@@ -264,10 +291,7 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppColors.textGray,
-          ),
+          style: const TextStyle(fontSize: 11, color: AppColors.textGray),
         ),
       ],
     );

@@ -19,17 +19,39 @@ abstract class GameLocalDataSource {
 /// Mapa de normalização de caracteres acentuados do Português.
 /// Remove acentos de vogais e converte ç para c.
 const Map<String, String> _accentMap = {
-  'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a',
-  'é': 'e', 'ê': 'e', 'ë': 'e',
-  'í': 'i', 'ï': 'i',
-  'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
-  'ú': 'u', 'ü': 'u',
+  'á': 'a',
+  'à': 'a',
+  'â': 'a',
+  'ã': 'a',
+  'ä': 'a',
+  'é': 'e',
+  'ê': 'e',
+  'ë': 'e',
+  'í': 'i',
+  'ï': 'i',
+  'ó': 'o',
+  'ô': 'o',
+  'õ': 'o',
+  'ö': 'o',
+  'ú': 'u',
+  'ü': 'u',
   'ç': 'c',
-  'Á': 'A', 'À': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A',
-  'É': 'E', 'Ê': 'E', 'Ë': 'E',
-  'Í': 'I', 'Ï': 'I',
-  'Ó': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O',
-  'Ú': 'U', 'Ü': 'U',
+  'Á': 'A',
+  'À': 'A',
+  'Â': 'A',
+  'Ã': 'A',
+  'Ä': 'A',
+  'É': 'E',
+  'Ê': 'E',
+  'Ë': 'E',
+  'Í': 'I',
+  'Ï': 'I',
+  'Ó': 'O',
+  'Ô': 'O',
+  'Õ': 'O',
+  'Ö': 'O',
+  'Ú': 'U',
+  'Ü': 'U',
   'Ç': 'C',
 };
 
@@ -60,20 +82,27 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     final exists = await databaseExists(path);
 
     if (!exists) {
-      print("GameLocalDataSource: Copying words.db from assets to local app storage (v$_dbVersion)...");
+      print(
+        "GameLocalDataSource: Copying words.db from assets to local app storage (v$_dbVersion)...",
+      );
       try {
         await Directory(dirname(path)).create(recursive: true);
       } catch (_) {}
 
       // Copy from asset
       final data = await rootBundle.load("assets/words.db");
-      final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
-      
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+
       // Write to file
       await File(path).writeAsBytes(bytes, flush: true);
       print("GameLocalDataSource: Successfully copied words.db.");
     } else {
-      print("GameLocalDataSource: Opening existing words.db database (v$_dbVersion).");
+      print(
+        "GameLocalDataSource: Opening existing words.db database (v$_dbVersion).",
+      );
     }
 
     _database = await openDatabase(path, readOnly: true);
@@ -99,7 +128,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     for (int i = 0; i < length; i++) {
       if (guessNormalized[i] == secretNormalized[i]) {
         feedbackStatuses[i] = 'correct';
-        secretCounts[guessNormalized[i]] = secretCounts[guessNormalized[i]]! - 1;
+        secretCounts[guessNormalized[i]] =
+            secretCounts[guessNormalized[i]]! - 1;
       }
     }
 
@@ -117,10 +147,15 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     // Revela a letra com acento original se estiver na posição correta (verde),
     // caso contrário, mantém a letra sem acento digitada pelo usuário.
     final secretOriginal = secret.trim().toUpperCase();
-    return List.generate(length, (i) => {
-      'letter': feedbackStatuses[i] == 'correct' ? secretOriginal[i] : guessNormalized[i],
-      'status': feedbackStatuses[i],
-    });
+    return List.generate(
+      length,
+      (i) => {
+        'letter': feedbackStatuses[i] == 'correct'
+            ? secretOriginal[i]
+            : guessNormalized[i],
+        'status': feedbackStatuses[i],
+      },
+    );
   }
 
   int _getDateSeed() {
@@ -132,7 +167,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
   Future<ChallengeModel> getDailyChallenge({String gameMode = 'TERMO'}) async {
     final db = await _getDatabase();
     final expectedWordCount = _expectedWordCountForMode(gameMode);
-    
+
     try {
       // 1. Get all target words of length 5 ordered by ID
       final List<Map<String, dynamic>> targetWords = await db.query(
@@ -150,7 +185,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       // 2. Deterministic dateseed based selection
       final seed = _getDateSeed();
       final rand = Random(seed);
-      
+
       final selectedWordIds = <int>[];
       while (selectedWordIds.length < expectedWordCount) {
         final idx = rand.nextInt(targetWords.length);
@@ -167,14 +202,16 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       );
     } catch (e) {
       if (e is ServerException) rethrow;
-      throw ServerException('Falha ao gerar desafio diário local para $gameMode: $e');
+      throw ServerException(
+        'Falha ao gerar desafio diário local para $gameMode: $e',
+      );
     }
   }
 
   @override
   Future<ChallengeModel> getRandomChallenge(int length) async {
     final db = await _getDatabase();
-    
+
     try {
       // Find all target words of the given length
       final List<Map<String, dynamic>> targets = await db.query(
@@ -184,7 +221,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
         whereArgs: [length],
         orderBy: 'id ASC',
       );
-      
+
       List<Map<String, dynamic>> finalList = targets;
       if (targets.isEmpty) {
         // Fallback to all words of that length
@@ -196,19 +233,17 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
           orderBy: 'id ASC',
         );
       }
-      
+
       if (finalList.isEmpty) {
-        throw ServerException('Dicionário de palavras para o comprimento $length está vazio.');
+        throw ServerException(
+          'Dicionário de palavras para o comprimento $length está vazio.',
+        );
       }
-      
+
       final randomIdx = Random().nextInt(finalList.length);
       final wordId = finalList[randomIdx]['id'] as int;
-      
-      return ChallengeModel(
-        wordId: wordId,
-        length: length,
-        wordIds: [wordId],
-      );
+
+      return ChallengeModel(wordId: wordId, length: length, wordIds: [wordId]);
     } catch (e) {
       if (e is ServerException) rethrow;
       throw ServerException('Erro ao buscar desafio aleatório local: $e');
@@ -220,7 +255,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     final cleanGuess = guess.trim().toLowerCase();
     final normalizedGuess = normalizePortuguese(cleanGuess);
     final db = await _getDatabase();
-    
+
     try {
       // 1. Validate if word exists in local database.
       //    Primeiro tenta busca exata (com acento), depois pela coluna normalizada.
@@ -230,7 +265,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
         where: 'words = ?',
         whereArgs: [cleanGuess],
       );
-      
+
       if (dictCheck.isEmpty) {
         // Busca pela versão normalizada (sem acento)
         dictCheck = await db.query(
@@ -240,11 +275,13 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
           whereArgs: [normalizedGuess],
         );
       }
-      
+
       if (dictCheck.isEmpty) {
-        throw InvalidWordException('"$guess" não é uma palavra válida no dicionário oficial do jogo.');
+        throw InvalidWordException(
+          '"$guess" não é uma palavra válida no dicionário oficial do jogo.',
+        );
       }
-      
+
       // 2. Fetch target word text to perform evaluation
       final List<Map<String, dynamic>> targetWordResp = await db.query(
         'valid_words',
@@ -252,26 +289,27 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
         where: 'id = ?',
         whereArgs: [wordId],
       );
-      
+
       if (targetWordResp.isEmpty) {
-        throw ServerException('Palavra de referência inválida ou não encontrada no banco local.');
+        throw ServerException(
+          'Palavra de referência inválida ou não encontrada no banco local.',
+        );
       }
-      
+
       final targetWord = targetWordResp.first['words'] as String;
       final targetNormalized = targetWordResp.first['normalized'] as String;
-      
+
       // 3. Evaluate matching statuses locally (comparação normalizada)
       final feedback = _evaluateGuess(cleanGuess, targetWord);
-      
+
       // 4. Verifica vitória comparando as versões normalizadas
-      final isCorrect = normalizedGuess.toUpperCase() == targetNormalized.toUpperCase();
-      
+      final isCorrect =
+          normalizedGuess.toUpperCase() == targetNormalized.toUpperCase();
+
       return GuessResultModel(
         guess: cleanGuess,
         isCorrect: isCorrect,
-        feedback: feedback
-            .map((f) => LetterFeedbackModel.fromJson(f))
-            .toList(),
+        feedback: feedback.map((f) => LetterFeedbackModel.fromJson(f)).toList(),
       );
     } catch (e) {
       if (e is InvalidWordException || e is ServerException) rethrow;
@@ -282,7 +320,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
   @override
   Future<String> revealWord(int wordId) async {
     final db = await _getDatabase();
-    
+
     try {
       final List<Map<String, dynamic>> response = await db.query(
         'valid_words',
@@ -290,11 +328,11 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
         where: 'id = ?',
         whereArgs: [wordId],
       );
-      
+
       if (response.isEmpty) {
         throw ServerException('Palavra secreta não encontrada no banco local.');
       }
-      
+
       return response.first['words'] as String;
     } catch (e) {
       if (e is ServerException) rethrow;

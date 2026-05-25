@@ -12,10 +12,7 @@ class DailyModeSelectionScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text(
           'PALAVRA DO DIA',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 2),
         ),
       ),
       body: Center(

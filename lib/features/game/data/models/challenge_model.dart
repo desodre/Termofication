@@ -18,8 +18,8 @@ class ChallengeModel extends Challenge {
   }
 
   Map<String, dynamic> toJson() => {
-        'word_id': wordId,
-        'length': length,
-        'word_ids': wordIds,
-      };
+    'word_id': wordId,
+    'length': length,
+    'word_ids': wordIds,
+  };
 }

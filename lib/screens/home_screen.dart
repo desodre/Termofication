@@ -10,7 +10,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   late AnimationController _floatController;
   late Animation<double> _floatAnimation;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -18,7 +19,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void initState() {
     super.initState();
-    
+
     // Idle Floating Title Animation (Slow, soothing continuous vertical hover)
     _floatController = AnimationController(
       duration: const Duration(seconds: 4),
@@ -49,7 +50,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
             center: Alignment(0.0, -0.3),
             radius: 1.3,
             colors: [
-              Color(0xFF182315), // Deep ambient dark green glow in the center-top
+              Color(
+                0xFF182315,
+              ), // Deep ambient dark green glow in the center-top
               Color(0xFF121213), // Deep standard dark background
             ],
             stops: [0.0, 0.75],
@@ -96,9 +99,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                   letterSpacing: 12,
                                   shadows: [
                                     Shadow(
-                                      color: AppColors.correct.withValues(alpha: 0.45),
+                                      color: AppColors.correct.withValues(
+                                        alpha: 0.45,
+                                      ),
                                       blurRadius: 20,
-                                    )
+                                    ),
                                   ],
                                 ),
                               ),
@@ -107,7 +112,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
-                                  color: AppColors.textWhite.withValues(alpha: 0.8),
+                                  color: AppColors.textWhite.withValues(
+                                    alpha: 0.8,
+                                  ),
                                   letterSpacing: 10,
                                 ),
                               ),
@@ -124,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                         ),
                         const SizedBox(height: 64),
-                        
+
                         // Interactive Glassmorphic Mode Cards
                         const _ModeCard(
                           label: 'PALAVRA DO DIA',
@@ -246,8 +253,12 @@ class _ModeCardState extends State<_ModeCard> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    widget.themeColor.withValues(alpha: _isHovered ? 0.25 : 0.15),
-                    widget.themeColor.withValues(alpha: _isHovered ? 0.12 : 0.05),
+                    widget.themeColor.withValues(
+                      alpha: _isHovered ? 0.25 : 0.15,
+                    ),
+                    widget.themeColor.withValues(
+                      alpha: _isHovered ? 0.12 : 0.05,
+                    ),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(16),
@@ -259,10 +270,12 @@ class _ModeCardState extends State<_ModeCard> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: widget.themeColor.withValues(alpha: _isHovered ? 0.18 : 0.05),
+                    color: widget.themeColor.withValues(
+                      alpha: _isHovered ? 0.18 : 0.05,
+                    ),
                     blurRadius: _isHovered ? 20 : 10,
                     offset: const Offset(0, 4),
-                  )
+                  ),
                 ],
               ),
               child: Row(
@@ -296,7 +309,7 @@ class _ModeCardState extends State<_ModeCard> {
                               Shadow(
                                 color: widget.themeColor.withValues(alpha: 0.5),
                                 blurRadius: 8,
-                              )
+                              ),
                             ],
                           ),
                         ),

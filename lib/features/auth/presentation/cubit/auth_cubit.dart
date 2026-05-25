@@ -15,10 +15,9 @@ class AuthCubit extends Cubit<UserAuthState> {
       final User? user = session?.user;
 
       if (session != null && user != null) {
-        emit(UserAuthAuthenticated(
-          user: user,
-          accessToken: session.accessToken,
-        ));
+        emit(
+          UserAuthAuthenticated(user: user, accessToken: session.accessToken),
+        );
       } else {
         // Se já estivermos explicitamente em modo anônimo, não reseta para Initial
         if (state is! UserAuthAnonymous) {

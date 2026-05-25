@@ -17,7 +17,8 @@ class AppRoutes {
     dailyGameSelect: (_) => const DailyModeSelectionScreen(),
     dailyGame: (_) => const GameDesktopScreen(mode: GameMode.daily),
     dailyDuetoGame: (_) => const GameDesktopScreen(mode: GameMode.dailyDueto),
-    dailyQuartetoGame: (_) => const GameDesktopScreen(mode: GameMode.dailyQuarteto),
+    dailyQuartetoGame: (_) =>
+        const GameDesktopScreen(mode: GameMode.dailyQuarteto),
     infiniteGame: (_) => const GameDesktopScreen(mode: GameMode.infinite),
   };
 }

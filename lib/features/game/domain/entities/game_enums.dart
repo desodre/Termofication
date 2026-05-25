@@ -1,9 +1,4 @@
-enum GameMode {
-  daily,
-  dailyDueto,
-  dailyQuarteto,
-  infinite,
-}
+enum GameMode { daily, dailyDueto, dailyQuarteto, infinite }
 
 enum GameStatus {
   loading,
@@ -14,12 +9,7 @@ enum GameStatus {
   error,
 }
 
-enum LetterStatus {
-  unknown,
-  absent,
-  present,
-  correct,
-}
+enum LetterStatus { unknown, absent, present, correct }
 
 extension GameModeExtension on GameMode {
   /// Mapeia para o valor da coluna `game_mode` na tabela `daily_challenges`

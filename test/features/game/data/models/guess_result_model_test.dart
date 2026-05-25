@@ -6,10 +6,7 @@ import 'package:termofication_app/features/game/domain/entities/game_enums.dart'
 void main() {
   group('GuessResultModel & LetterFeedbackModel', () {
     test('deve desserializar LetterFeedbackModel corretamente', () {
-      final json = {
-        'letter': 'c',
-        'status': 'correct',
-      };
+      final json = {'letter': 'c', 'status': 'correct'};
 
       final model = LetterFeedbackModel.fromJson(json);
 

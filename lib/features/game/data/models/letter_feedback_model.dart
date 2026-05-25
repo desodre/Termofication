@@ -2,10 +2,7 @@ import '../../domain/entities/game_enums.dart';
 import '../../domain/entities/letter_feedback.dart';
 
 class LetterFeedbackModel extends LetterFeedback {
-  const LetterFeedbackModel({
-    required super.letter,
-    required super.status,
-  });
+  const LetterFeedbackModel({required super.letter, required super.status});
 
   factory LetterFeedbackModel.fromJson(Map<String, dynamic> json) {
     return LetterFeedbackModel(
@@ -14,10 +11,7 @@ class LetterFeedbackModel extends LetterFeedback {
     );
   }
 
-  Map<String, dynamic> toJson() => {
-        'letter': letter,
-        'status': status.name,
-      };
+  Map<String, dynamic> toJson() => {'letter': letter, 'status': status.name};
 
   static LetterStatus _statusFromString(String s) {
     switch (s.trim().toLowerCase()) {

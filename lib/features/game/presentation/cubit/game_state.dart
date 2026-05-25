@@ -15,7 +15,7 @@ class GameState {
   final List<Map<String, LetterStatus>> boardKeyboardColors;
   final List<bool> boardCompleted;
   final String? errorMessage;
-  
+
   // Estatísticas do modo Infinito
   final int infiniteWins;
   final int infiniteLosses;

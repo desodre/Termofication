@@ -40,22 +40,26 @@ class GameCubit extends Cubit<GameState> {
   Future<void> startGame(GameMode mode) async {
     final boardCount = mode.wordCount;
 
-    emit(state.copyWith(
-      status: GameStatus.loading,
-      mode: mode,
-      targetWordId: 0,
-      targetWordIds: const [],
-      targetWord: '',
-      targetWords: const [],
-      currentGuess: '',
-      guesses: [],
-      boardGuesses: List.generate(boardCount, (_) => <GuessResult>[]),
-      keyboardColors: {},
-      boardKeyboardColors:
-          List.generate(boardCount, (_) => <String, LetterStatus>{}),
-      boardCompleted: List.generate(boardCount, (_) => false),
-      clearError: true,
-    ));
+    emit(
+      state.copyWith(
+        status: GameStatus.loading,
+        mode: mode,
+        targetWordId: 0,
+        targetWordIds: const [],
+        targetWord: '',
+        targetWords: const [],
+        currentGuess: '',
+        guesses: [],
+        boardGuesses: List.generate(boardCount, (_) => <GuessResult>[]),
+        keyboardColors: {},
+        boardKeyboardColors: List.generate(
+          boardCount,
+          (_) => <String, LetterStatus>{},
+        ),
+        boardCompleted: List.generate(boardCount, (_) => false),
+        clearError: true,
+      ),
+    );
 
     try {
       if (mode.isDaily) {
@@ -66,10 +70,7 @@ class GameCubit extends Cubit<GameState> {
     } catch (e, st) {
       print(e);
       print(st);
-      emit(state.copyWith(
-        status: GameStatus.error,
-        errorMessage: 'Erro: $e',
-      ));
+      emit(state.copyWith(status: GameStatus.error, errorMessage: 'Erro: $e'));
     }
   }
 
@@ -81,39 +82,51 @@ class GameCubit extends Cubit<GameState> {
         savedData['date'] == today &&
         (savedData['wordIds'] as List).isNotEmpty) {
       final List<int> wordIds = List<int>.from(savedData['wordIds'] as List);
-      final List<String> targetWords =
-          List<String>.from(savedData['targetWords'] as List? ?? const []);
-      final List<List<GuessResult>> boardGuesses =
-          List<List<GuessResult>>.from(savedData['boardGuesses'] as List? ?? const []);
-      final List<bool> boardCompleted =
-          List<bool>.from(savedData['boardCompleted'] as List? ?? const []);
+      final List<String> targetWords = List<String>.from(
+        savedData['targetWords'] as List? ?? const [],
+      );
+      final List<List<GuessResult>> boardGuesses = List<List<GuessResult>>.from(
+        savedData['boardGuesses'] as List? ?? const [],
+      );
+      final List<bool> boardCompleted = List<bool>.from(
+        savedData['boardCompleted'] as List? ?? const [],
+      );
       final Map<String, LetterStatus> keyboardColors =
-          Map<String, LetterStatus>.from(savedData['keyboardColors'] as Map? ?? const {});
+          Map<String, LetterStatus>.from(
+            savedData['keyboardColors'] as Map? ?? const {},
+          );
       final GameStatus status = savedData['status'] as GameStatus;
 
-      final normalizedBoardGuesses = _normalizeBoardGuesses(wordIds.length, boardGuesses);
+      final normalizedBoardGuesses = _normalizeBoardGuesses(
+        wordIds.length,
+        boardGuesses,
+      );
       final normalizedBoardCompleted = _normalizeBoardCompleted(
         wordIds.length,
         boardCompleted,
         normalizedBoardGuesses,
       );
-      final boardKeyboardColors = _rebuildAllBoardKeyboardColors(normalizedBoardGuesses);
+      final boardKeyboardColors = _rebuildAllBoardKeyboardColors(
+        normalizedBoardGuesses,
+      );
       final mergedKeyboard = keyboardColors.isNotEmpty
           ? keyboardColors
           : _mergeAllKeyboardColors(boardKeyboardColors);
 
-      emit(state.copyWith(
-        status: status,
-        targetWordId: wordIds.first,
-        targetWordIds: wordIds,
-        targetWord: targetWords.isNotEmpty ? targetWords.first : '',
-        targetWords: targetWords,
-        guesses: normalizedBoardGuesses.first,
-        boardGuesses: normalizedBoardGuesses,
-        keyboardColors: mergedKeyboard,
-        boardKeyboardColors: boardKeyboardColors,
-        boardCompleted: normalizedBoardCompleted,
-      ));
+      emit(
+        state.copyWith(
+          status: status,
+          targetWordId: wordIds.first,
+          targetWordIds: wordIds,
+          targetWord: targetWords.isNotEmpty ? targetWords.first : '',
+          targetWords: targetWords,
+          guesses: normalizedBoardGuesses.first,
+          boardGuesses: normalizedBoardGuesses,
+          keyboardColors: mergedKeyboard,
+          boardKeyboardColors: boardKeyboardColors,
+          boardCompleted: normalizedBoardCompleted,
+        ),
+      );
       return;
     }
 
@@ -123,31 +136,35 @@ class GameCubit extends Cubit<GameState> {
           ? challenge.wordIds.take(state.mode.wordCount).toList()
           : [challenge.wordId];
 
-      final boardGuesses = List.generate(wordIds.length, (_) => <GuessResult>[]);
-      final boardKeyboardColors =
-          List.generate(wordIds.length, (_) => <String, LetterStatus>{});
+      final boardGuesses = List.generate(
+        wordIds.length,
+        (_) => <GuessResult>[],
+      );
+      final boardKeyboardColors = List.generate(
+        wordIds.length,
+        (_) => <String, LetterStatus>{},
+      );
       final boardCompleted = List.generate(wordIds.length, (_) => false);
 
-      emit(state.copyWith(
-        status: GameStatus.playing,
-        targetWordId: wordIds.first,
-        targetWordIds: wordIds,
-        targetWord: '',
-        targetWords: List.generate(wordIds.length, (_) => ''),
-        guesses: boardGuesses.first,
-        boardGuesses: boardGuesses,
-        keyboardColors: {},
-        boardKeyboardColors: boardKeyboardColors,
-        boardCompleted: boardCompleted,
-      ));
+      emit(
+        state.copyWith(
+          status: GameStatus.playing,
+          targetWordId: wordIds.first,
+          targetWordIds: wordIds,
+          targetWord: '',
+          targetWords: List.generate(wordIds.length, (_) => ''),
+          guesses: boardGuesses.first,
+          boardGuesses: boardGuesses,
+          keyboardColors: {},
+          boardKeyboardColors: boardKeyboardColors,
+          boardCompleted: boardCompleted,
+        ),
+      );
       await _saveDailyState();
     } catch (e, st) {
       print(e);
       print(st);
-      emit(state.copyWith(
-        status: GameStatus.error,
-        errorMessage: 'Erro: $e',
-      ));
+      emit(state.copyWith(status: GameStatus.error, errorMessage: 'Erro: $e'));
     }
   }
 
@@ -155,49 +172,52 @@ class GameCubit extends Cubit<GameState> {
     final challenge = await getRandomWordUseCase(length: wordLength);
     final stats = await repository.getInfiniteStats();
 
-    emit(state.copyWith(
-      status: GameStatus.playing,
-      targetWordId: challenge.wordId,
-      targetWordIds: [challenge.wordId],
-      targetWord: '',
-      targetWords: const [''],
-      guesses: const [],
-      boardGuesses: const <List<GuessResult>>[[]],
-      infiniteWins: stats['wins'] ?? 0,
-      infiniteLosses: stats['losses'] ?? 0,
-      infiniteStreak: stats['streak'] ?? 0,
-      keyboardColors: const {},
-      boardKeyboardColors: const <Map<String, LetterStatus>>[{}],
-      boardCompleted: const [false],
-    ));
+    emit(
+      state.copyWith(
+        status: GameStatus.playing,
+        targetWordId: challenge.wordId,
+        targetWordIds: [challenge.wordId],
+        targetWord: '',
+        targetWords: const [''],
+        guesses: const [],
+        boardGuesses: const <List<GuessResult>>[[]],
+        infiniteWins: stats['wins'] ?? 0,
+        infiniteLosses: stats['losses'] ?? 0,
+        infiniteStreak: stats['streak'] ?? 0,
+        keyboardColors: const {},
+        boardKeyboardColors: const <Map<String, LetterStatus>>[{}],
+        boardCompleted: const [false],
+      ),
+    );
   }
 
   void addLetter(String letter) {
     if (state.status != GameStatus.playing) return;
     if (state.currentGuess.length >= wordLength) return;
-    
+
     final newGuess = state.currentGuess + letter.toLowerCase();
-    emit(state.copyWith(
-      currentGuess: newGuess,
-      clearError: true,
-    ));
+    emit(state.copyWith(currentGuess: newGuess, clearError: true));
   }
 
   void removeLetter() {
     if (state.status != GameStatus.playing) return;
     if (state.currentGuess.isEmpty) return;
-    
-    final newGuess = state.currentGuess.substring(0, state.currentGuess.length - 1);
-    emit(state.copyWith(
-      currentGuess: newGuess,
-      clearError: true,
-    ));
+
+    final newGuess = state.currentGuess.substring(
+      0,
+      state.currentGuess.length - 1,
+    );
+    emit(state.copyWith(currentGuess: newGuess, clearError: true));
   }
 
   Future<void> submitGuess() async {
     if (state.status != GameStatus.playing) return;
     if (state.currentGuess.length < wordLength) {
-      emit(state.copyWith(errorMessage: 'Palavra incompleta. Digite $wordLength letras.'));
+      emit(
+        state.copyWith(
+          errorMessage: 'Palavra incompleta. Digite $wordLength letras.',
+        ),
+      );
       return;
     }
 
@@ -220,7 +240,9 @@ class GameCubit extends Cubit<GameState> {
           final base = index < state.boardGuesses.length
               ? List<GuessResult>.from(state.boardGuesses[index])
               : <GuessResult>[];
-          final wasCompleted = index < state.boardCompleted.length && state.boardCompleted[index];
+          final wasCompleted =
+              index < state.boardCompleted.length &&
+              state.boardCompleted[index];
           if (!wasCompleted) {
             base.add(results[index]);
           }
@@ -234,7 +256,9 @@ class GameCubit extends Cubit<GameState> {
           final base = index < state.boardKeyboardColors.length
               ? state.boardKeyboardColors[index]
               : const <String, LetterStatus>{};
-          final wasCompleted = index < state.boardCompleted.length && state.boardCompleted[index];
+          final wasCompleted =
+              index < state.boardCompleted.length &&
+              state.boardCompleted[index];
           if (!wasCompleted) {
             return _updateKeyboardColors(base, results[index]);
           }
@@ -243,28 +267,34 @@ class GameCubit extends Cubit<GameState> {
       );
 
       final updatedKeyboard = _mergeAllKeyboardColors(updatedBoardKeyboard);
-      final updatedBoardCompleted = List<bool>.generate(
-        targetWordIds.length,
-        (index) {
-          final wasCompleted =
-              index < state.boardCompleted.length && state.boardCompleted[index];
-          return wasCompleted || results[index].isCorrect;
-        },
-      );
+      final updatedBoardCompleted = List<bool>.generate(targetWordIds.length, (
+        index,
+      ) {
+        final wasCompleted =
+            index < state.boardCompleted.length && state.boardCompleted[index];
+        return wasCompleted || results[index].isCorrect;
+      });
 
       final attemptsUsed = updatedBoardGuesses.isNotEmpty
-          ? updatedBoardGuesses.fold<int>(0, (max, list) => list.length > max ? list.length : max)
+          ? updatedBoardGuesses.fold<int>(
+              0,
+              (max, list) => list.length > max ? list.length : max,
+            )
           : 0;
       final attemptsLimit = maxAttemptsForMode(state.mode);
       final allBoardsCompleted =
-          updatedBoardCompleted.isNotEmpty && updatedBoardCompleted.every((b) => b);
+          updatedBoardCompleted.isNotEmpty &&
+          updatedBoardCompleted.every((b) => b);
 
       GameStatus nextStatus = GameStatus.playing;
       int wins = state.infiniteWins;
       int losses = state.infiniteLosses;
       int streak = state.infiniteStreak;
-      List<String> revealedWords =
-          List<String>.filled(targetWordIds.length, '', growable: false);
+      List<String> revealedWords = List<String>.filled(
+        targetWordIds.length,
+        '',
+        growable: false,
+      );
 
       if (allBoardsCompleted) {
         nextStatus = GameStatus.won;
@@ -279,7 +309,11 @@ class GameCubit extends Cubit<GameState> {
         if (state.mode == GameMode.infinite) {
           wins++;
           streak++;
-          await repository.saveInfiniteStats(wins: wins, losses: losses, streak: streak);
+          await repository.saveInfiniteStats(
+            wins: wins,
+            losses: losses,
+            streak: streak,
+          );
 
           final authState = authCubit?.state;
           if (authState is UserAuthAuthenticated) {
@@ -303,7 +337,11 @@ class GameCubit extends Cubit<GameState> {
         if (state.mode == GameMode.infinite) {
           losses++;
           streak = 0;
-          await repository.saveInfiniteStats(wins: wins, losses: losses, streak: streak);
+          await repository.saveInfiniteStats(
+            wins: wins,
+            losses: losses,
+            streak: streak,
+          );
 
           final authState = authCubit?.state;
           if (authState is UserAuthAuthenticated) {
@@ -316,41 +354,39 @@ class GameCubit extends Cubit<GameState> {
         }
       }
 
-      emit(state.copyWith(
-        status: nextStatus,
-        currentGuess: '',
-        targetWord: revealedWords.isNotEmpty ? revealedWords.first : '',
-        targetWords: revealedWords,
-        guesses: updatedBoardGuesses.isNotEmpty
-            ? updatedBoardGuesses.first
-            : const <GuessResult>[],
-        boardGuesses: updatedBoardGuesses,
-        keyboardColors: updatedKeyboard,
-        boardKeyboardColors: updatedBoardKeyboard,
-        boardCompleted: updatedBoardCompleted,
-        infiniteWins: wins,
-        infiniteLosses: losses,
-        infiniteStreak: streak,
-      ));
+      emit(
+        state.copyWith(
+          status: nextStatus,
+          currentGuess: '',
+          targetWord: revealedWords.isNotEmpty ? revealedWords.first : '',
+          targetWords: revealedWords,
+          guesses: updatedBoardGuesses.isNotEmpty
+              ? updatedBoardGuesses.first
+              : const <GuessResult>[],
+          boardGuesses: updatedBoardGuesses,
+          keyboardColors: updatedKeyboard,
+          boardKeyboardColors: updatedBoardKeyboard,
+          boardCompleted: updatedBoardCompleted,
+          infiniteWins: wins,
+          infiniteLosses: losses,
+          infiniteStreak: streak,
+        ),
+      );
 
       if (state.mode.isDaily) {
         await _saveDailyState();
       }
     } on InvalidWordException catch (e) {
-      emit(state.copyWith(
-        status: GameStatus.playing,
-        errorMessage: e.message,
-      ));
+      emit(state.copyWith(status: GameStatus.playing, errorMessage: e.message));
     } on NetworkException catch (e) {
-      emit(state.copyWith(
-        status: GameStatus.playing,
-        errorMessage: e.message,
-      ));
+      emit(state.copyWith(status: GameStatus.playing, errorMessage: e.message));
     } catch (e) {
-      emit(state.copyWith(
-        status: GameStatus.playing,
-        errorMessage: 'Erro inesperado ao validar palpite.',
-      ));
+      emit(
+        state.copyWith(
+          status: GameStatus.playing,
+          errorMessage: 'Erro inesperado ao validar palpite.',
+        ),
+      );
     }
   }
 
@@ -384,7 +420,7 @@ class GameCubit extends Cubit<GameState> {
     GuessResult newResult,
   ) {
     final Map<String, LetterStatus> updated = Map.from(currentColors);
-    
+
     for (final fb in newResult.feedback) {
       final current = updated[fb.letter];
       if (current == LetterStatus.correct) continue;
@@ -393,7 +429,7 @@ class GameCubit extends Cubit<GameState> {
       }
       updated[fb.letter] = fb.status;
     }
-    
+
     return updated;
   }
 
@@ -427,7 +463,9 @@ class GameCubit extends Cubit<GameState> {
     final normalized = List<bool>.from(boardCompleted);
     while (normalized.length < expectedBoards) {
       final idx = normalized.length;
-      final guesses = idx < boardGuesses.length ? boardGuesses[idx] : const <GuessResult>[];
+      final guesses = idx < boardGuesses.length
+          ? boardGuesses[idx]
+          : const <GuessResult>[];
       normalized.add(guesses.any((g) => g.isCorrect));
     }
     if (normalized.length > expectedBoards) {

@@ -8,10 +8,10 @@ void main() async {
   final supabaseKey = env['SUPABASE_ANON_KEY']!;
 
   final client = SupabaseClient(supabaseUrl, supabaseKey);
-  
+
   final today = DateTime.now().toIso8601String().substring(0, 10);
   print('Today is: ' + today);
-  
+
   try {
     final response = await client
         .from('daily_challenges')

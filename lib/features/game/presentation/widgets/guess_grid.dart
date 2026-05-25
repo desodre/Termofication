@@ -68,8 +68,9 @@ class GuessGrid extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: List.generate(wordLength, (col) {
-                      final letter =
-                          col < currentGuess.length ? currentGuess[col] : '';
+                      final letter = col < currentGuess.length
+                          ? currentGuess[col]
+                          : '';
                       return Padding(
                         padding: EdgeInsets.symmetric(horizontal: tilePadding),
                         child: LetterTile(

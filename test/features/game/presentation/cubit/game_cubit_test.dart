@@ -9,10 +9,7 @@ import 'package:termofication_app/features/game/domain/usecases/submit_guess_use
 import 'package:termofication_app/features/game/presentation/cubit/game_cubit.dart';
 
 class MockGameRepository implements GameRepository {
-  final Map<int, String> _words = {
-    1: 'termo',
-    2: 'carta',
-  };
+  final Map<int, String> _words = {1: 'termo', 2: 'carta'};
 
   int nextWordId = 1;
   GuessResult? submitGuessResult;
@@ -38,7 +35,7 @@ class MockGameRepository implements GameRepository {
   @override
   Future<GuessResult> submitGuess(String guess, int wordId) async {
     if (submitGuessResult != null) return submitGuessResult!;
-    
+
     final target = _words[wordId] ?? 'termo';
     final isCorrect = guess == target;
     return GuessResult(
@@ -50,7 +47,9 @@ class MockGameRepository implements GameRepository {
           letter: guess[i],
           status: guess[i] == target[i]
               ? LetterStatus.correct
-              : (target.contains(guess[i]) ? LetterStatus.present : LetterStatus.absent),
+              : (target.contains(guess[i])
+                    ? LetterStatus.present
+                    : LetterStatus.absent),
         ),
       ),
     );
@@ -91,11 +90,17 @@ class MockGameRepository implements GameRepository {
     required int losses,
     required int streak,
   }) async {
-    infiniteStatsData = {
-      'wins': wins,
-      'losses': losses,
-      'streak': streak,
-    };
+    infiniteStatsData = {'wins': wins, 'losses': losses, 'streak': streak};
+  }
+
+  @override
+  Future<void> recordGame({
+    required bool won,
+    required int attempts,
+    required String accessToken,
+  }) {
+    // TODO: implement recordGame
+    throw UnimplementedError();
   }
 }
 
@@ -129,18 +134,21 @@ void main() {
 
     test('deve carregar jogo infinito com palavra-alvo sorteada', () async {
       mockRepository.nextWordId = 2; // Maps to 'carta'
-      
+
       await cubit.startGame(GameMode.infinite);
 
       expect(cubit.state.status, GameStatus.playing);
       expect(cubit.state.targetWordId, 2);
-      expect(cubit.state.targetWord, isEmpty); // Target word must not leak during play!
+      expect(
+        cubit.state.targetWord,
+        isEmpty,
+      ); // Target word must not leak during play!
       expect(cubit.state.mode, GameMode.infinite);
     });
 
     test('deve adicionar letras até o limite da palavra', () async {
       await cubit.startGame(GameMode.infinite);
-      
+
       cubit.addLetter('C');
       cubit.addLetter('a');
       cubit.addLetter('r');
@@ -153,7 +161,7 @@ void main() {
 
     test('deve remover a última letra digitada', () async {
       await cubit.startGame(GameMode.infinite);
-      
+
       cubit.addLetter('a');
       cubit.addLetter('m');
       cubit.addLetter('o');
@@ -165,13 +173,13 @@ void main() {
     test('deve submeter palpite correto e vencer o jogo', () async {
       mockRepository.nextWordId = 1; // Maps to 'termo'
       await cubit.startGame(GameMode.infinite);
-      
+
       cubit.addLetter('t');
       cubit.addLetter('e');
       cubit.addLetter('r');
       cubit.addLetter('m');
       cubit.addLetter('o');
-      
+
       await cubit.submitGuess();
 
       expect(cubit.state.status, GameStatus.won);

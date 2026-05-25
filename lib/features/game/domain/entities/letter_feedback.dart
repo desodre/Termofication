@@ -4,8 +4,5 @@ class LetterFeedback {
   final String letter;
   final LetterStatus status;
 
-  const LetterFeedback({
-    required this.letter,
-    required this.status,
-  });
+  const LetterFeedback({required this.letter, required this.status});
 }

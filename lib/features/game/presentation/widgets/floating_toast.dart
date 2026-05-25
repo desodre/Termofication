@@ -24,16 +24,14 @@ class _ToastWidget extends StatefulWidget {
   final String message;
   final VoidCallback onDismiss;
 
-  const _ToastWidget({
-    required this.message,
-    required this.onDismiss,
-  });
+  const _ToastWidget({required this.message, required this.onDismiss});
 
   @override
   State<_ToastWidget> createState() => _ToastWidgetState();
 }
 
-class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderStateMixin {
+class _ToastWidgetState extends State<_ToastWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -46,18 +44,12 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
       duration: const Duration(milliseconds: 350),
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0.0, -0.4),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
 
@@ -96,7 +88,10 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.redAccent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
@@ -109,7 +104,7 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
                             color: Colors.redAccent.withValues(alpha: 0.08),
                             blurRadius: 16,
                             offset: const Offset(0, 8),
-                          )
+                          ),
                         ],
                       ),
                       child: Row(

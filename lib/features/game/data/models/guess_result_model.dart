@@ -13,16 +13,23 @@ class GuessResultModel extends GuessResult {
       guess: json['guess'] as String,
       isCorrect: json['is_correct'] as bool,
       feedback: (json['feedback'] as List)
-          .map((f) => LetterFeedbackModel.fromJson(Map<String, dynamic>.from(f as Map)))
+          .map(
+            (f) => LetterFeedbackModel.fromJson(
+              Map<String, dynamic>.from(f as Map),
+            ),
+          )
           .toList(),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'guess': guess,
-        'is_correct': isCorrect,
-        'feedback': feedback
-            .map((f) => LetterFeedbackModel(letter: f.letter, status: f.status).toJson())
-            .toList(),
-      };
+    'guess': guess,
+    'is_correct': isCorrect,
+    'feedback': feedback
+        .map(
+          (f) =>
+              LetterFeedbackModel(letter: f.letter, status: f.status).toJson(),
+        )
+        .toList(),
+  };
 }

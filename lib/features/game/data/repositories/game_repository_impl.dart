@@ -12,10 +12,8 @@ class GameRepositoryImpl implements GameRepository {
   final GameLocalDataSource localDataSource;
   final GetStorage storage;
 
-  GameRepositoryImpl({
-    required this.localDataSource,
-    GetStorage? storage,
-  }) : storage = storage ?? GetStorage();
+  GameRepositoryImpl({required this.localDataSource, GetStorage? storage})
+    : storage = storage ?? GetStorage();
 
   @override
   Future<Challenge> getDailyChallenge({GameMode mode = GameMode.daily}) async {
@@ -55,8 +53,10 @@ class GameRepositoryImpl implements GameRepository {
     await storage.write('${prefix}_target_words', targetWords);
     await storage.write('${prefix}_board_completed', boardCompleted);
     await storage.write('${prefix}_status', status.name);
-    await storage.write('${prefix}_keyboard_colors',
-        keyboardColors.map((k, v) => MapEntry(k, v.name)));
+    await storage.write(
+      '${prefix}_keyboard_colors',
+      keyboardColors.map((k, v) => MapEntry(k, v.name)),
+    );
 
     final serializedBoards = boardGuesses
         .map(
@@ -78,11 +78,18 @@ class GameRepositoryImpl implements GameRepository {
     // Retrocompatibilidade para o modo TERMO legado
     if (mode == GameMode.daily) {
       await storage.write('daily_date', date);
-      await storage.write('daily_word_id', wordIds.isNotEmpty ? wordIds.first : 0);
       await storage.write(
-          'daily_word', targetWords.isNotEmpty ? targetWords.first : '');
+        'daily_word_id',
+        wordIds.isNotEmpty ? wordIds.first : 0,
+      );
       await storage.write(
-          'daily_guesses', serializedBoards.isNotEmpty ? serializedBoards.first : []);
+        'daily_word',
+        targetWords.isNotEmpty ? targetWords.first : '',
+      );
+      await storage.write(
+        'daily_guesses',
+        serializedBoards.isNotEmpty ? serializedBoards.first : [],
+      );
       await storage.write('daily_status', status.name);
     }
   }
@@ -125,13 +132,20 @@ class GameRepositoryImpl implements GameRepository {
       boardGuesses = rawBoardGuesses.map((board) {
         final boardList = board as List;
         return boardList
-            .map((g) => GuessResultModel.fromJson(Map<String, dynamic>.from(g as Map)))
+            .map(
+              (g) => GuessResultModel.fromJson(
+                Map<String, dynamic>.from(g as Map),
+              ),
+            )
             .toList();
       }).toList();
     } else if (mode == GameMode.daily) {
       final legacyGuesses = storage.read<List>('daily_guesses');
       final guesses = (legacyGuesses ?? [])
-          .map((g) => GuessResultModel.fromJson(Map<String, dynamic>.from(g as Map)))
+          .map(
+            (g) =>
+                GuessResultModel.fromJson(Map<String, dynamic>.from(g as Map)),
+          )
           .toList();
       boardGuesses = [guesses];
     }
@@ -142,7 +156,8 @@ class GameRepositoryImpl implements GameRepository {
       boardCompleted = rawBoardCompleted.map((e) => e as bool).toList();
     }
 
-    final statusStr = storage.read<String>('${prefix}_status') ??
+    final statusStr =
+        storage.read<String>('${prefix}_status') ??
         (mode == GameMode.daily
             ? (storage.read<String>('daily_status') ?? 'playing')
             : 'playing');
@@ -183,12 +198,8 @@ class GameRepositoryImpl implements GameRepository {
     final wins = storage.read<int>('infinite_wins') ?? 0;
     final losses = storage.read<int>('infinite_losses') ?? 0;
     final streak = storage.read<int>('infinite_streak') ?? 0;
-    
-    return {
-      'wins': wins,
-      'losses': losses,
-      'streak': streak,
-    };
+
+    return {'wins': wins, 'losses': losses, 'streak': streak};
   }
 
   GameStatus _statusFromString(String s) {
@@ -231,13 +242,8 @@ class GameRepositoryImpl implements GameRepository {
       final dio = Dio();
       await dio.post(
         '${ApiClient.baseUrl}/api/v1/stats/record',
-        data: {
-          'won': won,
-          'attempts': attempts,
-        },
-        options: Options(
-          headers: {'Authorization': 'Bearer $accessToken'},
-        ),
+        data: {'won': won, 'attempts': attempts},
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
     } catch (e) {
       print('Erro ao registrar estatísticas remotas no FastAPI: $e');

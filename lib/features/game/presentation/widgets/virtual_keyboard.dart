@@ -36,12 +36,16 @@ class VirtualKeyboard extends StatelessWidget {
 
             for (final key in row) {
               final isWide = key == 'ENTER' || key == '⌫';
-              
+
               final List<LetterStatus> statuses = [];
               for (int i = 0; i < wordCount; i++) {
-                final boardColorMap = i < boardColors.length ? boardColors[i] : <String, LetterStatus>{};
+                final boardColorMap = i < boardColors.length
+                    ? boardColors[i]
+                    : <String, LetterStatus>{};
                 // fb.letter is UPPERCASE from GameRemoteDataSourceImpl
-                statuses.add(boardColorMap[key.toUpperCase()] ?? LetterStatus.unknown);
+                statuses.add(
+                  boardColorMap[key.toUpperCase()] ?? LetterStatus.unknown,
+                );
               }
 
               final flexVal = isWide ? 15 : 10;
@@ -124,7 +128,7 @@ class _KeyButtonState extends State<_KeyButton> {
 
   Widget _buildBackground() {
     final count = widget.statuses.length;
-    
+
     if (_isWide || count <= 1) {
       final status = count > 0 ? widget.statuses.first : LetterStatus.unknown;
       return Container(color: _getColor(status));
@@ -155,8 +159,24 @@ class _KeyButtonState extends State<_KeyButton> {
         Expanded(
           child: Row(
             children: [
-              Expanded(child: Container(color: _getColor(widget.statuses.length > 2 ? widget.statuses[2] : LetterStatus.unknown))),
-              Expanded(child: Container(color: _getColor(widget.statuses.length > 3 ? widget.statuses[3] : LetterStatus.unknown))),
+              Expanded(
+                child: Container(
+                  color: _getColor(
+                    widget.statuses.length > 2
+                        ? widget.statuses[2]
+                        : LetterStatus.unknown,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  color: _getColor(
+                    widget.statuses.length > 3
+                        ? widget.statuses[3]
+                        : LetterStatus.unknown,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -184,7 +204,9 @@ class _KeyButtonState extends State<_KeyButton> {
       child: MouseRegion(
         onEnter: (_) => setState(() => _isHovered = true),
         onExit: (_) => setState(() => _isHovered = false),
-        cursor: widget.enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
+        cursor: widget.enabled
+            ? SystemMouseCursors.click
+            : SystemMouseCursors.basic,
         child: GestureDetector(
           onTapDown: (_) {
             if (widget.enabled) setState(() => _isPressed = true);
@@ -197,7 +219,9 @@ class _KeyButtonState extends State<_KeyButton> {
           },
           onTap: widget.enabled ? widget.onTap : null,
           child: AnimatedScale(
-            scale: _isPressed ? 0.92 : (_isHovered && widget.enabled ? 1.05 : 1.0),
+            scale: _isPressed
+                ? 0.92
+                : (_isHovered && widget.enabled ? 1.05 : 1.0),
             duration: const Duration(milliseconds: 100),
             curve: Curves.easeOut,
             child: SizedBox(
@@ -218,7 +242,12 @@ class _KeyButtonState extends State<_KeyButton> {
                         color: overlayColor,
                         borderRadius: BorderRadius.circular(6),
                         border: _isHovered && widget.enabled
-                            ? Border.all(color: AppColors.textWhite.withValues(alpha: 0.3), width: 1.5)
+                            ? Border.all(
+                                color: AppColors.textWhite.withValues(
+                                  alpha: 0.3,
+                                ),
+                                width: 1.5,
+                              )
                             : null,
                         boxShadow: _isHovered && widget.enabled
                             ? [
@@ -226,7 +255,7 @@ class _KeyButtonState extends State<_KeyButton> {
                                   color: Colors.white.withValues(alpha: 0.1),
                                   blurRadius: 8,
                                   offset: const Offset(0, 2),
-                                )
+                                ),
                               ]
                             : null,
                       ),
