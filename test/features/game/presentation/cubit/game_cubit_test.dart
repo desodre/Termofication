@@ -23,6 +23,9 @@ class MockGameRepository implements GameRepository {
   }
 
   @override
+  Future<void> syncInfiniteStats() async {}
+
+  @override
   Future<Challenge> getRandomChallenge({int length = 5}) async {
     return Challenge(wordId: nextWordId, length: length);
   }

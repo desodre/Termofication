@@ -1,6 +1,7 @@
 import 'package:supabase/supabase.dart';
 import 'package:dotenv/dotenv.dart';
 import 'dart:io';
+import 'dart:developer';
 
 class ServerException implements Exception {
   final String message;
@@ -20,7 +21,10 @@ void main() async {
   final expectedWordCount = 2;
   final today = DateTime.now().toIso8601String().substring(0, 10);
 
-  print('Testing getDailyChallenge for \$gameMode on \$today');
+  log(
+    'Testing getDailyChallenge for \$gameMode on \$today',
+    name: 'test_datasource',
+  );
 
   try {
     final response = await client
@@ -30,12 +34,12 @@ void main() async {
         .eq('game_mode', gameMode)
         .maybeSingle();
 
-    print('Supabase response: ' + response.toString());
+    log('Supabase response: $response', name: 'test_datasource');
     if (response != null) {
       final wordIds = (response['word_ids'] as List<dynamic>)
           .map((e) => e as int)
           .toList();
-      print('Parsed wordIds: ' + wordIds.toString());
+      log('Parsed wordIds: $wordIds', name: 'test_datasource');
       if (wordIds.isNotEmpty) {
         final selectedWordIds = wordIds.take(expectedWordCount).toList();
         final wordId = selectedWordIds[0];
@@ -47,16 +51,23 @@ void main() async {
             .single();
 
         final length = wordResp['length'] as int;
-        print('Success! length: \$length, wordIds: \$selectedWordIds');
+        log(
+          'Success! length: \$length, wordIds: \$selectedWordIds',
+          name: 'test_datasource',
+        );
         exit(0);
       }
     }
   } catch (e, st) {
-    print('Error caught during Supabase block: ' + e.toString());
-    print(st);
+    log(
+      'Error caught during Supabase block: $e',
+      name: 'test_datasource',
+      error: e,
+      stackTrace: st,
+    );
   }
 
-  print('Fell back to getRandomChallenge');
+  log('Fell back to getRandomChallenge', name: 'test_datasource');
 
   try {
     final response = await client
@@ -84,10 +95,17 @@ void main() async {
       cursor++;
     }
 
-    print('Success fallback! wordIds: \$selectedWordIds');
+    log(
+      'Success fallback! wordIds: \$selectedWordIds',
+      name: 'test_datasource',
+    );
   } catch (e, st) {
-    print('Fallback failed: ' + e.toString());
-    print(st);
+    log(
+      'Fallback failed: $e',
+      name: 'test_datasource',
+      error: e,
+      stackTrace: st,
+    );
   }
   exit(0);
 }

@@ -1,6 +1,6 @@
-import 'package:dio/dio.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:get_storage/get_storage.dart';
-import '../../../../core/network/api_client.dart';
+import 'dart:developer';
 import '../../domain/entities/challenge.dart';
 import '../../domain/entities/game_enums.dart';
 import '../../domain/entities/guess_result.dart';
@@ -233,21 +233,81 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
+  Future<void> syncInfiniteStats() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+      
+      final response = await supabase
+          .from('user_stats')
+          .select()
+          .eq('user_id', user.id)
+          .maybeSingle();
+          
+      if (response != null) {
+        final played = response['games_played'] as int? ?? 0;
+        final wins = response['games_won'] as int? ?? 0;
+        final losses = played - wins;
+        final streak = response['current_streak'] as int? ?? 0;
+        
+        await storage.write('infinite_wins', wins);
+        await storage.write('infinite_losses', losses);
+        await storage.write('infinite_streak', streak);
+      }
+    } catch (e) {
+      log('Erro ao sincronizar stats remotas do Supabase: $e');
+    }
+  }
+
+  @override
   Future<void> recordGame({
     required bool won,
     required int attempts,
     required String accessToken,
   }) async {
     try {
-      final dio = Dio();
-      await dio.post(
-        '${ApiClient.baseUrl}/api/v1/stats/record',
-        data: {'won': won, 'attempts': attempts},
-        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
-      );
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+      
+      final wins = storage.read<int>('infinite_wins') ?? 0;
+      final losses = storage.read<int>('infinite_losses') ?? 0;
+      final streak = storage.read<int>('infinite_streak') ?? 0;
+      final gamesPlayed = wins + losses;
+
+      final response = await supabase
+          .from('user_stats')
+          .select()
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+      int maxStreak = (response?['max_streak'] as int?) ?? 0;
+      Map<String, dynamic> guessDist = response?['guess_distribution'] as Map<String, dynamic>? ?? {};
+
+      if (streak > maxStreak) {
+        maxStreak = streak;
+      }
+      
+      if (won) {
+        final key = attempts.toString();
+        guessDist[key] = (guessDist[key] as int? ?? 0) + 1;
+      }
+
+      await supabase.from('user_stats').upsert({
+        'user_id': user.id,
+        'games_played': gamesPlayed,
+        'games_won': wins,
+        'current_streak': streak,
+        'max_streak': maxStreak,
+        'guess_distribution': guessDist,
+      });
     } catch (e) {
-      print('Erro ao registrar estatísticas remotas no FastAPI: $e');
-      // Não re-lança o erro para não prejudicar a experiência do usuário se a rede falhar
+      log(
+        'Erro ao registrar estatísticas remotas no Supabase: $e',
+        name: 'GameRepositoryImpl',
+        error: e,
+      );
     }
   }
 }

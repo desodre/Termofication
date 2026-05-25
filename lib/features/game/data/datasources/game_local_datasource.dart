@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:developer' as developer;
 import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart';
@@ -82,8 +83,9 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     final exists = await databaseExists(path);
 
     if (!exists) {
-      print(
+      developer.log(
         "GameLocalDataSource: Copying words.db from assets to local app storage (v$_dbVersion)...",
+        name: 'GameLocalDataSource',
       );
       try {
         await Directory(dirname(path)).create(recursive: true);
@@ -98,10 +100,14 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
 
       // Write to file
       await File(path).writeAsBytes(bytes, flush: true);
-      print("GameLocalDataSource: Successfully copied words.db.");
+      developer.log(
+        "GameLocalDataSource: Successfully copied words.db.",
+        name: 'GameLocalDataSource',
+      );
     } else {
-      print(
+      developer.log(
         "GameLocalDataSource: Opening existing words.db database (v$_dbVersion).",
+        name: 'GameLocalDataSource',
       );
     }
 

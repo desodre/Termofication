@@ -30,6 +30,8 @@ abstract class GameRepository {
 
   Future<Map<String, int>> getInfiniteStats();
 
+  Future<void> syncInfiniteStats();
+
   Future<void> recordGame({
     required bool won,
     required int attempts,

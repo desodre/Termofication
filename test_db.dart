@@ -1,6 +1,7 @@
 import 'package:supabase/supabase.dart';
 import 'package:dotenv/dotenv.dart';
 import 'dart:io';
+import 'dart:developer';
 
 void main() async {
   var env = DotEnv(includePlatformEnvironment: true)..load();
@@ -10,7 +11,7 @@ void main() async {
   final client = SupabaseClient(supabaseUrl, supabaseKey);
 
   final today = DateTime.now().toIso8601String().substring(0, 10);
-  print('Today is: ' + today);
+  log('Today is: $today', name: 'test_db');
 
   try {
     final response = await client
@@ -20,10 +21,10 @@ void main() async {
         .limit(1)
         .single();
     final wordIds = response['word_ids'];
-    print('Type of word_ids: ' + wordIds.runtimeType.toString());
-    print('Value: ' + wordIds.toString());
+    log('Type of word_ids: ${wordIds.runtimeType}', name: 'test_db');
+    log('Value: $wordIds', name: 'test_db');
   } catch (e) {
-    print('Error: ' + e.toString());
+    log('Error: $e', name: 'test_db', error: e);
   }
   exit(0);
 }

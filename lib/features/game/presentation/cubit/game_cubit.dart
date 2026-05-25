@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:developer';
 import '../../../../core/network/api_client.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
@@ -68,8 +69,12 @@ class GameCubit extends Cubit<GameState> {
         await _startInfiniteGame();
       }
     } catch (e, st) {
-      print(e);
-      print(st);
+      log(
+        'Erro ao iniciar jogo: $e',
+        name: 'GameCubit',
+        error: e,
+        stackTrace: st,
+      );
       emit(state.copyWith(status: GameStatus.error, errorMessage: 'Erro: $e'));
     }
   }
@@ -162,14 +167,23 @@ class GameCubit extends Cubit<GameState> {
       );
       await _saveDailyState();
     } catch (e, st) {
-      print(e);
-      print(st);
+      log(
+        'Erro ao iniciar jogo diário: $e',
+        name: 'GameCubit',
+        error: e,
+        stackTrace: st,
+      );
       emit(state.copyWith(status: GameStatus.error, errorMessage: 'Erro: $e'));
     }
   }
 
   Future<void> _startInfiniteGame() async {
     final challenge = await getRandomWordUseCase(length: wordLength);
+    
+    if (authCubit?.state is UserAuthAuthenticated) {
+      await repository.syncInfiniteStats();
+    }
+    
     final stats = await repository.getInfiniteStats();
 
     emit(

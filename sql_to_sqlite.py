@@ -1,7 +1,13 @@
 import sqlite3
 import os
 import time
-import unicodedata
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger("sql_to_sqlite")
 
 # Mapa de normalização de caracteres acentuados do Português para seus equivalentes ASCII.
 # Cobre todas as vogais acentuadas e o ç.
@@ -93,7 +99,11 @@ def parse_sql_file(file_path):
                     try:
                         yield parse_statement(statement)
                     except Exception as e:
-                        print(f"Error parsing statement: {statement[:100]}... Error: {e}")
+                        logger.error(
+                            "Error parsing statement: %s... Error: %s",
+                            statement[:100],
+                            e,
+                        )
                 content_buffer = [line]
             else:
                 if content_buffer:
@@ -105,7 +115,11 @@ def parse_sql_file(file_path):
             try:
                 yield parse_statement(statement)
             except Exception as e:
-                print(f"Error parsing last statement: {statement[:100]}... Error: {e}")
+                logger.error(
+                    "Error parsing last statement: %s... Error: %s",
+                    statement[:100],
+                    e,
+                )
 
 def main():
     sql_file_path = "assets/valid_words_rows.sql"
@@ -118,7 +132,7 @@ def main():
     if os.path.exists(sqlite_db_path):
         os.remove(sqlite_db_path)
 
-    print("Connecting to local SQLite database...")
+    logger.info("Connecting to local SQLite database...")
     start_time = time.time()
     sl_conn = sqlite3.connect(sqlite_db_path)
     sl_cursor = sl_conn.cursor()
@@ -140,7 +154,7 @@ def main():
     sl_cursor.execute("CREATE INDEX idx_length_target ON valid_words (length, is_target)")
     sl_conn.commit()
 
-    print("Parsing SQL dump and inserting into SQLite...")
+    logger.info("Parsing SQL dump and inserting into SQLite...")
     
     batch_size = 100000
     batch = []
@@ -163,7 +177,7 @@ def main():
             )
             sl_conn.commit()
             total_inserted += len(batch)
-            print(f"Inserted {total_inserted} rows...")
+            logger.info("Inserted %d rows...", total_inserted)
             batch = []
             
     # Insert remaining rows
@@ -174,9 +188,9 @@ def main():
         )
         sl_conn.commit()
         total_inserted += len(batch)
-        print(f"Inserted {total_inserted} rows...")
+        logger.info("Inserted %d rows...", total_inserted)
 
-    print("Optimizing SQLite database...")
+    logger.info("Optimizing SQLite database...")
     sl_cursor.execute("VACUUM")
     sl_conn.commit()
 
@@ -185,8 +199,13 @@ def main():
 
     duration = time.time() - start_time
     file_size = os.path.getsize(sqlite_db_path) / (1024 * 1024)
-    print(f"Done! Processed and imported {total_inserted} words to {sqlite_db_path} in {duration:.2f} seconds.")
-    print(f"SQLite database file size: {file_size:.2f} MB")
+    logger.info(
+        "Done! Processed and imported %d words to %s in %.2f seconds.",
+        total_inserted,
+        sqlite_db_path,
+        duration,
+    )
+    logger.info("SQLite database file size: %.2f MB", file_size)
 
 if __name__ == "__main__":
     main()
