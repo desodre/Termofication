@@ -9,6 +9,7 @@ class GameState {
   final String targetWord;
   final List<String> targetWords;
   final String currentGuess;
+  final int cursorIndex;
   final List<GuessResult> guesses;
   final List<List<GuessResult>> boardGuesses;
   final Map<String, LetterStatus> keyboardColors;
@@ -29,6 +30,7 @@ class GameState {
     this.targetWord = '',
     this.targetWords = const [],
     this.currentGuess = '',
+    this.cursorIndex = 0,
     this.guesses = const [],
     this.boardGuesses = const [],
     this.keyboardColors = const {},
@@ -48,6 +50,7 @@ class GameState {
     String? targetWord,
     List<String>? targetWords,
     String? currentGuess,
+    int? cursorIndex,
     List<GuessResult>? guesses,
     List<List<GuessResult>>? boardGuesses,
     Map<String, LetterStatus>? keyboardColors,
@@ -67,6 +70,7 @@ class GameState {
       targetWord: targetWord ?? this.targetWord,
       targetWords: targetWords ?? this.targetWords,
       currentGuess: currentGuess ?? this.currentGuess,
+      cursorIndex: cursorIndex ?? this.cursorIndex,
       guesses: guesses ?? this.guesses,
       boardGuesses: boardGuesses ?? this.boardGuesses,
       keyboardColors: keyboardColors ?? this.keyboardColors,

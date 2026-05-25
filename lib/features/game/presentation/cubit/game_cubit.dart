@@ -179,6 +179,8 @@ class GameCubit extends Cubit<GameState> {
         targetWordIds: [challenge.wordId],
         targetWord: '',
         targetWords: const [''],
+        currentGuess: '',
+        cursorIndex: 0,
         guesses: const [],
         boardGuesses: const <List<GuessResult>>[[]],
         infiniteWins: stats['wins'] ?? 0,
@@ -191,28 +193,71 @@ class GameCubit extends Cubit<GameState> {
     );
   }
 
+  void setCursor(int index) {
+    if (state.status != GameStatus.playing) return;
+    String newGuess = state.currentGuess;
+    if (newGuess.length < wordLength) {
+      newGuess = newGuess.padRight(wordLength, ' ');
+    }
+    emit(state.copyWith(currentGuess: newGuess, cursorIndex: index));
+  }
+
   void addLetter(String letter) {
     if (state.status != GameStatus.playing) return;
-    if (state.currentGuess.length >= wordLength) return;
+    
+    String padded = state.currentGuess.padRight(wordLength, ' ');
+    
+    // Evita sobrescrever a última letra acidentalmente se a palavra já estiver cheia
+    // e o cursor estiver no final (comportamento clássico).
+    if (state.cursorIndex == wordLength - 1 && padded[state.cursorIndex] != ' ' && !padded.contains(' ')) {
+      return;
+    }
 
-    final newGuess = state.currentGuess + letter.toLowerCase();
-    emit(state.copyWith(currentGuess: newGuess, clearError: true));
+    String newGuess = padded.substring(0, state.cursorIndex) + 
+                      letter.toLowerCase() + 
+                      padded.substring(state.cursorIndex + 1);
+                      
+    int nextCursor = state.cursorIndex;
+    if (nextCursor < wordLength - 1) {
+      nextCursor++;
+    }
+    
+    emit(state.copyWith(
+      currentGuess: newGuess.trimRight(), 
+      cursorIndex: nextCursor,
+      clearError: true
+    ));
   }
 
   void removeLetter() {
     if (state.status != GameStatus.playing) return;
     if (state.currentGuess.isEmpty) return;
 
-    final newGuess = state.currentGuess.substring(
-      0,
-      state.currentGuess.length - 1,
-    );
-    emit(state.copyWith(currentGuess: newGuess, clearError: true));
+    String padded = state.currentGuess.padRight(wordLength, ' ');
+    int targetIndex = state.cursorIndex;
+    
+    if (padded[targetIndex] == ' ' && targetIndex > 0) {
+      targetIndex--;
+    }
+    
+    String newGuess = '${padded.substring(0, targetIndex)} ${padded.substring(targetIndex + 1)}';
+                      
+    if (newGuess.trim().isEmpty) {
+       newGuess = '';
+       targetIndex = 0;
+    }
+    
+    emit(state.copyWith(
+      currentGuess: newGuess.trimRight(), 
+      cursorIndex: targetIndex,
+      clearError: true
+    ));
   }
 
   Future<void> submitGuess() async {
     if (state.status != GameStatus.playing) return;
-    if (state.currentGuess.length < wordLength) {
+    final guessStr = state.currentGuess;
+    if (guessStr.trim().length < wordLength || guessStr.contains(' ')) {
       emit(
         state.copyWith(
           errorMessage: 'Palavra incompleta. Digite $wordLength letras.',
@@ -358,6 +403,7 @@ class GameCubit extends Cubit<GameState> {
         state.copyWith(
           status: nextStatus,
           currentGuess: '',
+          cursorIndex: 0,
           targetWord: revealedWords.isNotEmpty ? revealedWords.first : '',
           targetWords: revealedWords,
           guesses: updatedBoardGuesses.isNotEmpty

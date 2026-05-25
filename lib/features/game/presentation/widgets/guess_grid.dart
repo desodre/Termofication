@@ -68,15 +68,20 @@ class GuessGrid extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: List.generate(wordLength, (col) {
-                      final letter = col < currentGuess.length
+                      final char = col < currentGuess.length
                           ? currentGuess[col]
-                          : '';
+                          : ' ';
+                      final letter = char == ' ' ? '' : char;
                       return Padding(
                         padding: EdgeInsets.symmetric(horizontal: tilePadding),
-                        child: LetterTile(
-                          letter: letter,
-                          status: LetterStatus.unknown,
-                          size: tileSize,
+                        child: GestureDetector(
+                          onTap: () => context.read<GameCubit>().setCursor(col),
+                          child: LetterTile(
+                            letter: letter,
+                            status: LetterStatus.unknown,
+                            size: tileSize,
+                            isSelected: col == state.cursorIndex,
+                          ),
                         ),
                       );
                     }),

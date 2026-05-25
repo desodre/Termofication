@@ -7,6 +7,7 @@ class LetterTile extends StatefulWidget {
   final LetterStatus status;
   final double size;
   final Duration? animationDelay;
+  final bool isSelected;
 
   const LetterTile({
     super.key,
@@ -14,6 +15,7 @@ class LetterTile extends StatefulWidget {
     this.status = LetterStatus.unknown,
     this.size = 56,
     this.animationDelay,
+    this.isSelected = false,
   });
 
   @override
@@ -156,7 +158,12 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
               decoration: BoxDecoration(
                 color: backgroundColor,
                 borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: borderColor, width: 2),
+                border: Border.all(
+                  color: widget.isSelected && currentStatus == LetterStatus.unknown
+                      ? AppColors.textWhite
+                      : borderColor,
+                  width: widget.isSelected && currentStatus == LetterStatus.unknown ? 3 : 2,
+                ),
                 boxShadow: currentStatus != LetterStatus.unknown
                     ? [
                         BoxShadow(

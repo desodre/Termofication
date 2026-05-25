@@ -350,15 +350,4 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       throw ServerException('Erro ao revelar palavra secreta: $e');
     }
   }
-
-  int _expectedWordCountForMode(String gameMode) {
-    switch (gameMode.trim().toUpperCase()) {
-      case 'DUETO':
-        return 2;
-      case 'QUARTETO':
-        return 4;
-      default:
-        return 1;
-    }
-  }
 }
