@@ -16,6 +16,37 @@ abstract class GameLocalDataSource {
   Future<String> revealWord(int wordId);
 }
 
+/// Mapa de normalização de caracteres acentuados do Português.
+/// Remove acentos de vogais e converte ç para c.
+const Map<String, String> _accentMap = {
+  'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a',
+  'é': 'e', 'ê': 'e', 'ë': 'e',
+  'í': 'i', 'ï': 'i',
+  'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
+  'ú': 'u', 'ü': 'u',
+  'ç': 'c',
+  'Á': 'A', 'À': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A',
+  'É': 'E', 'Ê': 'E', 'Ë': 'E',
+  'Í': 'I', 'Ï': 'I',
+  'Ó': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O',
+  'Ú': 'U', 'Ü': 'U',
+  'Ç': 'C',
+};
+
+/// Remove acentos de vogais e converte ç/Ç para c/C.
+String normalizePortuguese(String word) {
+  final buffer = StringBuffer();
+  for (int i = 0; i < word.length; i++) {
+    final char = word[i];
+    buffer.write(_accentMap[char] ?? char);
+  }
+  return buffer.toString();
+}
+
+// Versão do banco de dados local. Incrementar ao alterar o esquema da tabela
+// para forçar re-cópia do asset no próximo lançamento do app.
+const int _dbVersion = 2;
+
 class GameLocalDataSourceImpl implements GameLocalDataSource {
   Database? _database;
 
@@ -23,13 +54,13 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     if (_database != null) return _database!;
 
     final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, "words.db");
+    final path = join(databasesPath, "words_v$_dbVersion.db");
 
     // Check if the database exists
     final exists = await databaseExists(path);
 
     if (!exists) {
-      print("GameLocalDataSource: Copying words.db from assets to local app storage...");
+      print("GameLocalDataSource: Copying words.db from assets to local app storage (v$_dbVersion)...");
       try {
         await Directory(dirname(path)).create(recursive: true);
       } catch (_) {}
@@ -42,7 +73,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       await File(path).writeAsBytes(bytes, flush: true);
       print("GameLocalDataSource: Successfully copied words.db.");
     } else {
-      print("GameLocalDataSource: Opening existing words.db database.");
+      print("GameLocalDataSource: Opening existing words.db database (v$_dbVersion).");
     }
 
     _database = await openDatabase(path, readOnly: true);
@@ -50,31 +81,32 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
   }
 
   List<Map<String, dynamic>> _evaluateGuess(String guess, String secret) {
-    final guessCleaned = guess.trim().toUpperCase();
-    final secretCleaned = secret.trim().toUpperCase();
+    // Normaliza ambos para comparação sem acentos
+    final guessNormalized = normalizePortuguese(guess.trim()).toUpperCase();
+    final secretNormalized = normalizePortuguese(secret.trim()).toUpperCase();
 
-    final length = secretCleaned.length;
+    final length = secretNormalized.length;
     final List<String> feedbackStatuses = List.filled(length, 'absent');
 
-    // Count frequencies of letters in secret
+    // Count frequencies of normalized letters in secret
     final Map<String, int> secretCounts = {};
     for (int i = 0; i < length; i++) {
-      final char = secretCleaned[i];
+      final char = secretNormalized[i];
       secretCounts[char] = (secretCounts[char] ?? 0) + 1;
     }
 
-    // First pass: correct matches
+    // First pass: correct matches (using normalized letters)
     for (int i = 0; i < length; i++) {
-      if (guessCleaned[i] == secretCleaned[i]) {
+      if (guessNormalized[i] == secretNormalized[i]) {
         feedbackStatuses[i] = 'correct';
-        secretCounts[guessCleaned[i]] = secretCounts[guessCleaned[i]]! - 1;
+        secretCounts[guessNormalized[i]] = secretCounts[guessNormalized[i]]! - 1;
       }
     }
 
-    // Second pass: present matches
+    // Second pass: present matches (using normalized letters)
     for (int i = 0; i < length; i++) {
       if (feedbackStatuses[i] != 'correct') {
-        final char = guessCleaned[i];
+        final char = guessNormalized[i];
         if ((secretCounts[char] ?? 0) > 0) {
           feedbackStatuses[i] = 'present';
           secretCounts[char] = secretCounts[char]! - 1;
@@ -82,8 +114,9 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       }
     }
 
+    // Retorna as letras normalizadas (sem acento) para exibição consistente no teclado
     return List.generate(length, (i) => {
-      'letter': guessCleaned[i],
+      'letter': guessNormalized[i],
       'status': feedbackStatuses[i],
     });
   }
@@ -183,16 +216,28 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
   @override
   Future<GuessResultModel> submitGuess(String guess, int wordId) async {
     final cleanGuess = guess.trim().toLowerCase();
+    final normalizedGuess = normalizePortuguese(cleanGuess);
     final db = await _getDatabase();
     
     try {
-      // 1. Validate if word exists in local database (O(1) lookups via UNIQUE index on 'words')
-      final List<Map<String, dynamic>> dictCheck = await db.query(
+      // 1. Validate if word exists in local database.
+      //    Primeiro tenta busca exata (com acento), depois pela coluna normalizada.
+      List<Map<String, dynamic>> dictCheck = await db.query(
         'valid_words',
         columns: ['id'],
         where: 'words = ?',
         whereArgs: [cleanGuess],
       );
+      
+      if (dictCheck.isEmpty) {
+        // Busca pela versão normalizada (sem acento)
+        dictCheck = await db.query(
+          'valid_words',
+          columns: ['id'],
+          where: 'normalized = ?',
+          whereArgs: [normalizedGuess],
+        );
+      }
       
       if (dictCheck.isEmpty) {
         throw InvalidWordException('"$guess" não é uma palavra válida no dicionário oficial do jogo.');
@@ -201,7 +246,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       // 2. Fetch target word text to perform evaluation
       final List<Map<String, dynamic>> targetWordResp = await db.query(
         'valid_words',
-        columns: ['words'],
+        columns: ['words', 'normalized'],
         where: 'id = ?',
         whereArgs: [wordId],
       );
@@ -211,10 +256,13 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       }
       
       final targetWord = targetWordResp.first['words'] as String;
+      final targetNormalized = targetWordResp.first['normalized'] as String;
       
-      // 3. Evaluate matching statuses locally
+      // 3. Evaluate matching statuses locally (comparação normalizada)
       final feedback = _evaluateGuess(cleanGuess, targetWord);
-      final isCorrect = cleanGuess.toUpperCase() == targetWord.toUpperCase();
+      
+      // 4. Verifica vitória comparando as versões normalizadas
+      final isCorrect = normalizedGuess.toUpperCase() == targetNormalized.toUpperCase();
       
       return GuessResultModel(
         guess: cleanGuess,

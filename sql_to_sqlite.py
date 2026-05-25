@@ -1,6 +1,28 @@
 import sqlite3
 import os
 import time
+import unicodedata
+
+# Mapa de normalização de caracteres acentuados do Português para seus equivalentes ASCII.
+# Cobre todas as vogais acentuadas e o ç.
+_ACCENT_MAP = str.maketrans({
+    'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a',
+    'é': 'e', 'ê': 'e', 'ë': 'e',
+    'í': 'i', 'ï': 'i',
+    'ó': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o',
+    'ú': 'u', 'ü': 'u',
+    'ç': 'c',
+    'Á': 'A', 'À': 'A', 'Â': 'A', 'Ã': 'A', 'Ä': 'A',
+    'É': 'E', 'Ê': 'E', 'Ë': 'E',
+    'Í': 'I', 'Ï': 'I',
+    'Ó': 'O', 'Ô': 'O', 'Õ': 'O', 'Ö': 'O',
+    'Ú': 'U', 'Ü': 'U',
+    'Ç': 'C',
+})
+
+def normalize_portuguese(word):
+    """Remove acentos de vogais e converte ç para c."""
+    return word.translate(_ACCENT_MAP)
 
 def parse_statement(statement):
     # Find the start of values
@@ -101,11 +123,12 @@ def main():
     sl_conn = sqlite3.connect(sqlite_db_path)
     sl_cursor = sl_conn.cursor()
 
-    # Create table
+    # Create table with normalized column
     sl_cursor.execute("""
         CREATE TABLE valid_words (
             id INTEGER PRIMARY KEY,
             words TEXT NOT NULL,
+            normalized TEXT NOT NULL,
             length INTEGER NOT NULL,
             is_target BOOLEAN NOT NULL
         )
@@ -113,6 +136,7 @@ def main():
     
     # Create indexes for extreme performance
     sl_cursor.execute("CREATE UNIQUE INDEX idx_words ON valid_words (words)")
+    sl_cursor.execute("CREATE INDEX idx_normalized ON valid_words (normalized)")
     sl_cursor.execute("CREATE INDEX idx_length_target ON valid_words (length, is_target)")
     sl_conn.commit()
 
@@ -129,11 +153,12 @@ def main():
         if length > 12:
             continue
         
-        batch.append((word_id, word_cleaned, length, is_target))
+        word_normalized = normalize_portuguese(word_cleaned)
+        batch.append((word_id, word_cleaned, word_normalized, length, is_target))
         
         if len(batch) >= batch_size:
             sl_cursor.executemany(
-                "INSERT OR IGNORE INTO valid_words (id, words, length, is_target) VALUES (?, ?, ?, ?)",
+                "INSERT OR IGNORE INTO valid_words (id, words, normalized, length, is_target) VALUES (?, ?, ?, ?, ?)",
                 batch
             )
             sl_conn.commit()
@@ -144,7 +169,7 @@ def main():
     # Insert remaining rows
     if batch:
         sl_cursor.executemany(
-            "INSERT OR IGNORE INTO valid_words (id, words, length, is_target) VALUES (?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO valid_words (id, words, normalized, length, is_target) VALUES (?, ?, ?, ?, ?)",
             batch
         )
         sl_conn.commit()
