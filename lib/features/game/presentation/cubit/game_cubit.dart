@@ -220,7 +220,10 @@ class GameCubit extends Cubit<GameState> {
           final base = index < state.boardGuesses.length
               ? List<GuessResult>.from(state.boardGuesses[index])
               : <GuessResult>[];
-          base.add(results[index]);
+          final wasCompleted = index < state.boardCompleted.length && state.boardCompleted[index];
+          if (!wasCompleted) {
+            base.add(results[index]);
+          }
           return base;
         },
       );
@@ -231,7 +234,11 @@ class GameCubit extends Cubit<GameState> {
           final base = index < state.boardKeyboardColors.length
               ? state.boardKeyboardColors[index]
               : const <String, LetterStatus>{};
-          return _updateKeyboardColors(base, results[index]);
+          final wasCompleted = index < state.boardCompleted.length && state.boardCompleted[index];
+          if (!wasCompleted) {
+            return _updateKeyboardColors(base, results[index]);
+          }
+          return base;
         },
       );
 
@@ -245,8 +252,9 @@ class GameCubit extends Cubit<GameState> {
         },
       );
 
-      final attemptsUsed =
-          updatedBoardGuesses.isNotEmpty ? updatedBoardGuesses.first.length : 0;
+      final attemptsUsed = updatedBoardGuesses.isNotEmpty
+          ? updatedBoardGuesses.fold<int>(0, (max, list) => list.length > max ? list.length : max)
+          : 0;
       final attemptsLimit = maxAttemptsForMode(state.mode);
       final allBoardsCompleted =
           updatedBoardCompleted.isNotEmpty && updatedBoardCompleted.every((b) => b);
