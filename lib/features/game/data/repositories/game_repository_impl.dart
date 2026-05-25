@@ -234,39 +234,44 @@ class GameRepositoryImpl implements GameRepository {
 
   @override
   Future<void> syncInfiniteStats() async {
-    print('GameRepositoryImpl: syncInfiniteStats() started');
+    developer.log('GameRepositoryImpl: syncInfiniteStats() started', name: 'GameRepository');
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
-      print('GameRepositoryImpl: syncInfiniteStats: currentUser = ${user?.id}');
+      developer.log('GameRepositoryImpl: syncInfiniteStats: currentUser = ${user?.id}', name: 'GameRepository');
       if (user == null) {
-        print('GameRepositoryImpl: syncInfiniteStats: User is null, aborting remote sync');
+        developer.log('GameRepositoryImpl: syncInfiniteStats: User is null, aborting remote sync', name: 'GameRepository');
         return;
       }
       
-      print('GameRepositoryImpl: syncInfiniteStats: Querying user_stats for ${user.id}...');
+      developer.log('GameRepositoryImpl: syncInfiniteStats: Querying user_stats for ${user.id}...', name: 'GameRepository');
       final response = await supabase
           .from('user_stats')
           .select()
           .eq('user_id', user.id)
           .maybeSingle();
       
-      print('GameRepositoryImpl: syncInfiniteStats: Query response = $response');
+      developer.log('GameRepositoryImpl: syncInfiniteStats: Query response = $response', name: 'GameRepository');
       if (response != null) {
         final played = response['games_played'] as int? ?? 0;
         final wins = response['games_won'] as int? ?? 0;
         final losses = played - wins;
         final streak = response['current_streak'] as int? ?? 0;
         
-        print('GameRepositoryImpl: syncInfiniteStats: Writing values to storage: wins=$wins, losses=$losses, streak=$streak');
+        developer.log('GameRepositoryImpl: syncInfiniteStats: Writing values to storage: wins=$wins, losses=$losses, streak=$streak', name: 'GameRepository');
         await storage.write('infinite_wins', wins);
         await storage.write('infinite_losses', losses);
         await storage.write('infinite_streak', streak);
       } else {
-        print('GameRepositoryImpl: syncInfiniteStats: No remote stats found for user.');
+        developer.log('GameRepositoryImpl: syncInfiniteStats: No remote stats found for user.', name: 'GameRepository');
       }
     } catch (e, st) {
-      print('GameRepositoryImpl: syncInfiniteStats ERROR: $e\n$st');
+      developer.log(
+        'GameRepositoryImpl: syncInfiniteStats ERROR: $e',
+        error: e,
+        stackTrace: st,
+        name: 'GameRepository',
+      );
       rethrow;
     }
   }
@@ -276,23 +281,23 @@ class GameRepositoryImpl implements GameRepository {
     required bool won,
     required int attempts,
   }) async {
-    print('GameRepositoryImpl: recordGame() started: won = $won, attempts = $attempts');
+    developer.log('GameRepositoryImpl: recordGame() started: won = $won, attempts = $attempts', name: 'GameRepository');
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
-      print('GameRepositoryImpl: recordGame: currentUser = ${user?.id}');
+      developer.log('GameRepositoryImpl: recordGame: currentUser = ${user?.id}', name: 'GameRepository');
       if (user == null) {
-        print('GameRepositoryImpl: recordGame: User is null, aborting remote recordGame');
+        developer.log('GameRepositoryImpl: recordGame: User is null, aborting remote recordGame', name: 'GameRepository');
         return;
       }
       
-      print('GameRepositoryImpl: recordGame: Querying current user_stats for ${user.id}...');
+      developer.log('GameRepositoryImpl: recordGame: Querying current user_stats for ${user.id}...', name: 'GameRepository');
       final response = await supabase
           .from('user_stats')
           .select()
           .eq('user_id', user.id)
           .maybeSingle();
-      print('GameRepositoryImpl: recordGame: Current user_stats = $response');
+      developer.log('GameRepositoryImpl: recordGame: Current user_stats = $response', name: 'GameRepository');
 
       int gamesPlayed = (response?['games_played'] as int?) ?? 0;
       int gamesWon = (response?['games_won'] as int?) ?? 0;
@@ -313,8 +318,9 @@ class GameRepositoryImpl implements GameRepository {
         currentStreak = 0;
       }
 
-      print(
+      developer.log(
         'GameRepositoryImpl: recordGame: Performing upsert with: gamesPlayed=$gamesPlayed, gamesWon=$gamesWon, currentStreak=$currentStreak, maxStreak=$maxStreak, guessDist=$guessDist',
+        name: 'GameRepository',
       );
       await supabase.from('user_stats').upsert({
         'user_id': user.id,
@@ -324,16 +330,21 @@ class GameRepositoryImpl implements GameRepository {
         'max_streak': maxStreak,
         'guess_distribution': guessDist,
       });
-      print('GameRepositoryImpl: recordGame: Remote upsert completed successfully');
+      developer.log('GameRepositoryImpl: recordGame: Remote upsert completed successfully', name: 'GameRepository');
 
       // Sobrescreve o local com a nova verdade remota
       final losses = gamesPlayed - gamesWon;
-      print('GameRepositoryImpl: recordGame: Writing values to storage: wins=$gamesWon, losses=$losses, streak=$currentStreak');
+      developer.log('GameRepositoryImpl: recordGame: Writing values to storage: wins=$gamesWon, losses=$losses, streak=$currentStreak', name: 'GameRepository');
       await storage.write('infinite_wins', gamesWon);
       await storage.write('infinite_losses', losses);
       await storage.write('infinite_streak', currentStreak);
     } catch (e, st) {
-      print('GameRepositoryImpl: recordGame ERROR: $e\n$st');
+      developer.log(
+        'GameRepositoryImpl: recordGame ERROR: $e',
+        error: e,
+        stackTrace: st,
+        name: 'GameRepository',
+      );
       rethrow;
     }
   }

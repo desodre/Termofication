@@ -28,42 +28,48 @@ class _StatsDialogState extends State<StatsDialog> {
 
   Future<void> _fetchStats() async {
     final authState = context.read<AuthCubit>().state;
-    print('StatsDialog: _fetchStats() initiated. authState = $authState');
+    developer.log('StatsDialog: _fetchStats() initiated. authState = $authState', name: 'StatsDialog');
 
     if (authState is UserAuthAuthenticated) {
       try {
         final supabase = Supabase.instance.client;
         final currentUser = supabase.auth.currentUser;
-        print(
+        developer.log(
           'StatsDialog: User is authenticated. authState.user.id = ${authState.user.id}, supabase.auth.currentUser.id = ${currentUser?.id}',
+          name: 'StatsDialog',
         );
         
-        print('StatsDialog: Fetching user_stats from Supabase for user_id = ${authState.user.id}...');
+        developer.log('StatsDialog: Fetching user_stats from Supabase for user_id = ${authState.user.id}...', name: 'StatsDialog');
         final response = await supabase
             .from('user_stats')
             .select()
             .eq('user_id', authState.user.id)
             .maybeSingle();
 
-        print('StatsDialog: Fetch user_stats response = $response');
+        developer.log('StatsDialog: Fetch user_stats response = $response', name: 'StatsDialog');
         if (response != null) {
           setState(() {
             _stats = response;
             _isLoading = false;
           });
         } else {
-          print('StatsDialog: No remote stats found (response is null). Triggering local fallback...');
+          developer.log('StatsDialog: No remote stats found (response is null). Triggering local fallback...', name: 'StatsDialog');
           _loadLocalStatsFallback();
         }
       } catch (e, st) {
-        print('StatsDialog: ERROR fetching remote stats: $e\n$st');
+        developer.log(
+          'StatsDialog: ERROR fetching remote stats: $e',
+          error: e,
+          stackTrace: st,
+          name: 'StatsDialog',
+        );
         setState(() {
           _errorMessage = 'Falha ao sincronizar estatísticas remotas.';
           _isLoading = false;
         });
       }
     } else {
-      print('StatsDialog: User is NOT authenticated. Triggering local fallback...');
+      developer.log('StatsDialog: User is NOT authenticated. Triggering local fallback...', name: 'StatsDialog');
       _loadLocalStatsFallback();
     }
   }
@@ -74,8 +80,9 @@ class _StatsDialogState extends State<StatsDialog> {
     final int losses = storage.read<int>('infinite_losses') ?? 0;
     final int streak = storage.read<int>('infinite_streak') ?? 0;
     
-    print(
+    developer.log(
       'StatsDialog: Loaded local fallback stats -> wins=$wins, losses=$losses, streak=$streak',
+      name: 'StatsDialog',
     );
 
     if (mounted) {
