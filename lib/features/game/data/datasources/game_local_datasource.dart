@@ -114,9 +114,11 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       }
     }
 
-    // Retorna as letras normalizadas (sem acento) para exibição consistente no teclado
+    // Revela a letra com acento original se estiver na posição correta (verde),
+    // caso contrário, mantém a letra sem acento digitada pelo usuário.
+    final secretOriginal = secret.trim().toUpperCase();
     return List.generate(length, (i) => {
-      'letter': guessNormalized[i],
+      'letter': feedbackStatuses[i] == 'correct' ? secretOriginal[i] : guessNormalized[i],
       'status': feedbackStatuses[i],
     });
   }
