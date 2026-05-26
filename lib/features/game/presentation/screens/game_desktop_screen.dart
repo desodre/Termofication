@@ -10,6 +10,7 @@ import '../cubit/game_state.dart';
 import '../widgets/guess_grid.dart';
 import '../widgets/virtual_keyboard.dart';
 import '../widgets/floating_toast.dart';
+import '../../../../widgets/game_gradient_background.dart';
 
 class GameDesktopScreen extends StatefulWidget {
   final GameMode mode;
@@ -74,172 +75,175 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
       focusNode: _focusNode,
       autofocus: true,
       onKeyEvent: _handleKeyEvent,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          backgroundColor: AppColors.background,
-          elevation: 0,
-          title: Text(
-            widget.mode == GameMode.infinite
-                ? 'MODO INFINITO'
-                : widget.mode.displayName.toUpperCase(),
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              letterSpacing: 4,
-              color: AppColors.textWhite,
+      child: GameGradientBackground(
+        mode: widget.mode,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            title: Text(
+              widget.mode == GameMode.infinite
+                  ? 'MODO INFINITO'
+                  : widget.mode.displayName.toUpperCase(),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                letterSpacing: 4,
+                color: AppColors.textWhite,
+              ),
             ),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textWhite),
-            onPressed: () {
-              AudioService.playClick();
-              Navigator.of(context).pop();
-            },
-          ),
-          actions: [
-            BlocBuilder<GameCubit, GameState>(
-              builder: (context, state) {
-                if (widget.mode == GameMode.infinite) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.present.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: AppColors.present.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          '🔥 ${state.infiniteStreak}',
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.present,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: AppColors.textWhite),
+              onPressed: () {
+                AudioService.playClick();
+                Navigator.of(context).pop();
               },
             ),
-          ],
-        ),
-        body: BlocListener<GameCubit, GameState>(
-          listenWhen: (previous, current) {
-            return previous.status != current.status ||
-                previous.errorMessage != current.errorMessage;
-          },
-          listener: (context, state) {
-            // Display floating toast for errors
-            if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
-              FloatingToast.show(context, state.errorMessage!);
-            }
-
-            // Detect Game Over to trigger the Dialog
-            final hasFinished =
-                state.status == GameStatus.won ||
-                state.status == GameStatus.lost;
-            final wasPlaying =
-                _lastStatus == GameStatus.playing ||
-                _lastStatus == GameStatus.submitting ||
-                _lastStatus == GameStatus.loading;
-
-            if (hasFinished && wasPlaying) {
-              _showResultDialog(context, state);
-              if (state.status == GameStatus.won) {
-                AudioService.playVictory();
+            actions: [
+              BlocBuilder<GameCubit, GameState>(
+                builder: (context, state) {
+                  if (widget.mode == GameMode.infinite) {
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 16),
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.present.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: AppColors.present.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            '🔥 ${state.infiniteStreak}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.present,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ],
+          ),
+          body: BlocListener<GameCubit, GameState>(
+            listenWhen: (previous, current) {
+              return previous.status != current.status ||
+                  previous.errorMessage != current.errorMessage;
+            },
+            listener: (context, state) {
+              // Display floating toast for errors
+              if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
+                FloatingToast.show(context, state.errorMessage!);
               }
-            }
 
-            _lastStatus = state.status;
-          },
-          child: BlocBuilder<GameCubit, GameState>(
-            builder: (context, state) {
-              if (state.status == GameStatus.loading) {
-                return const Center(
-                  child: CircularProgressIndicator(color: AppColors.correct),
-                );
-              }
-
-              final attemptsLimit = GameCubit.maxAttemptsForMode(state.mode);
-              final isGameOver =
+              // Detect Game Over to trigger the Dialog
+              final hasFinished =
                   state.status == GameStatus.won ||
                   state.status == GameStatus.lost;
+              final wasPlaying =
+                  _lastStatus == GameStatus.playing ||
+                  _lastStatus == GameStatus.submitting ||
+                  _lastStatus == GameStatus.loading;
 
-              return Column(
-                children: [
-                  Expanded(
-                    child: Center(
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          child: _BoardsLayout(
-                            mode: state.mode,
-                            boardCompleted: state.boardCompleted,
-                            maxAttempts: attemptsLimit,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (isGameOver)
-                    SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 32),
-                        child: Center(
-                          child: ElevatedButton.icon(
-                            onPressed: () => _showResultDialog(context, state),
-                            icon: const Icon(Icons.analytics_rounded),
-                            label: const Text(
-                              'VER RESULTADOS & ESTATÍSTICAS',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.correct,
-                              foregroundColor: AppColors.textWhite,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 16,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              elevation: 4,
-                              shadowColor: AppColors.correct.withValues(
-                                alpha: 0.3,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    )
-                  else
-                    SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 24),
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 600),
-                          child: const VirtualKeyboard(),
-                        ),
-                      ),
-                    ),
-                ],
-              );
+              if (hasFinished && wasPlaying) {
+                _showResultDialog(context, state);
+                if (state.status == GameStatus.won) {
+                  AudioService.playVictory();
+                }
+              }
+
+              _lastStatus = state.status;
             },
+            child: BlocBuilder<GameCubit, GameState>(
+              builder: (context, state) {
+                if (state.status == GameStatus.loading) {
+                  return const Center(
+                    child: CircularProgressIndicator(color: AppColors.correct),
+                  );
+                }
+
+                final attemptsLimit = GameCubit.maxAttemptsForMode(state.mode);
+                final isGameOver =
+                    state.status == GameStatus.won ||
+                    state.status == GameStatus.lost;
+
+                return Column(
+                  children: [
+                    Expanded(
+                      child: Center(
+                        child: SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 24),
+                            child: _BoardsLayout(
+                              mode: state.mode,
+                              boardCompleted: state.boardCompleted,
+                              maxAttempts: attemptsLimit,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (isGameOver)
+                      SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 32),
+                          child: Center(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showResultDialog(context, state),
+                              icon: const Icon(Icons.analytics_rounded),
+                              label: const Text(
+                                'VER RESULTADOS & ESTATÍSTICAS',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.correct,
+                                foregroundColor: AppColors.textWhite,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 4,
+                                shadowColor: AppColors.correct.withValues(
+                                  alpha: 0.3,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 600),
+                            child: const VirtualKeyboard(),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),

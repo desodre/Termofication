@@ -8,6 +8,7 @@ import '../features/auth/presentation/cubit/auth_cubit.dart';
 import '../features/auth/presentation/cubit/auth_state.dart';
 import '../features/game/presentation/widgets/stats_dialog.dart';
 import '../routes/app_routes.dart';
+import 'settings_dialog.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -195,19 +196,9 @@ class AppDrawer extends StatelessWidget {
                         onTap: () {
                           AudioService.playClick();
                           Navigator.pop(context);
-                          // TODO: Navegar para tela de configurações
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Configurações em breve!',
-                                style: .new(color: AppColors.textWhite),
-                              ),
-                              backgroundColor: AppColors.absent,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                          showDialog(
+                            context: context,
+                            builder: (_) => const SettingsDialog(),
                           );
                         },
                       ),
