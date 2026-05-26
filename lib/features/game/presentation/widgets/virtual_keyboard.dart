@@ -134,13 +134,10 @@ class _KeyButtonState extends State<_KeyButton> {
       return Container(color: _getColor(status));
     }
 
-    final dividerColor = AppColors.background.withValues(alpha: 0.5);
-
     if (count == 2) {
       return Row(
         children: [
           Expanded(child: Container(color: _getColor(widget.statuses[0]))),
-          Container(width: 2, color: dividerColor),
           Expanded(child: Container(color: _getColor(widget.statuses[1]))),
         ],
       );

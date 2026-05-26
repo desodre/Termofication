@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:developer';
 import '../../../../core/network/api_client.dart';
+import '../../../../core/utils/string_utils.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../domain/entities/game_enums.dart';
@@ -511,12 +512,13 @@ class GameCubit extends Cubit<GameState> {
     final Map<String, LetterStatus> updated = Map.from(currentColors);
 
     for (final fb in newResult.feedback) {
-      final current = updated[fb.letter];
+      final normalizedLetter = normalizePortuguese(fb.letter).toUpperCase();
+      final current = updated[normalizedLetter];
       if (current == LetterStatus.correct) continue;
       if (current == LetterStatus.present && fb.status == LetterStatus.absent) {
         continue;
       }
-      updated[fb.letter] = fb.status;
+      updated[normalizedLetter] = fb.status;
     }
 
     return updated;

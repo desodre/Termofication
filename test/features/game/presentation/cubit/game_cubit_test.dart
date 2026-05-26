@@ -211,5 +211,35 @@ void main() {
       expect(cubit.state.infiniteLosses, 1);
       expect(cubit.state.infiniteStreak, 0);
     });
+
+    test('deve mapear feedback com letras acentuadas para a tecla base correspondente no teclado virtual', () async {
+      mockRepository.nextWordId = 1;
+      await cubit.startGame(GameMode.infinite);
+
+      // Simula feedback contendo 'É' acentuado
+      mockRepository.submitGuessResult = const GuessResult(
+        guess: 'ébano',
+        isCorrect: false,
+        feedback: [
+          LetterFeedback(letter: 'É', status: LetterStatus.correct),
+          LetterFeedback(letter: 'B', status: LetterStatus.absent),
+          LetterFeedback(letter: 'A', status: LetterStatus.absent),
+          LetterFeedback(letter: 'N', status: LetterStatus.absent),
+          LetterFeedback(letter: 'O', status: LetterStatus.absent),
+        ],
+      );
+
+      cubit.addLetter('e');
+      cubit.addLetter('b');
+      cubit.addLetter('a');
+      cubit.addLetter('n');
+      cubit.addLetter('o');
+
+      await cubit.submitGuess();
+
+      // A tecla base 'E' deve receber o status corretor, e não a acentuada 'É'
+      expect(cubit.state.keyboardColors['E'], LetterStatus.correct);
+      expect(cubit.state.keyboardColors['É'], isNull);
+    });
   });
 }
