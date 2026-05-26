@@ -1,139 +1,179 @@
 # Copilot Instructions — termofication_app
 
-Flutter app do jogo **Termo** com arquitetura por features (Clean-ish) + **BLoC/Cubit**.  
-Hoje o core do jogo usa **Supabase** (tabelas `daily_challenges` e `valid_words`) e persistência local com **GetStorage**.
+Flutter app do jogo **Termo** com arquitetura por features (Clean-ish) e estado com **BLoC/Cubit**.
+
+> Importante: o `README.md` atual esta desatualizado em partes (ex.: mencoes a Provider/http). Para decisões tecnicas, priorize o codigo em `lib/`.
 
 ---
 
 ## Commands
 
 ```bash
-# Dependências
+# Dependencias
 flutter pub get
 
-# App
+# Rodar app
 flutter run
 
-# Análise estática
+# Analise estatica
 flutter analyze
 
-# Testes
+# Todos os testes
 flutter test
 
-# Teste específico
+# Teste especifico
 flutter test test/widget_test.dart
 ```
 
 ---
 
-## Arquitetura atual
+## Arquitetura real (estado atual)
 
-### Estado global e DI
-- O app inicia em `lib/main.dart`.
-- Providers globais:
-  - `BlocProvider<GameCubit>`
-  - `BlocProvider<AuthCubit>`
-- Injeção manual de dependências em `main.dart`:
-  - `ApiClient` → `GameRemoteDataSourceImpl` → `GameRepositoryImpl`
+### Bootstrap e DI
+- Entrada em `lib/main.dart`.
+- Inicializa:
+  - `GetStorage.init()`
+  - `.env` via `flutter_dotenv`
+  - `Supabase.initialize(url, anonKey)`
+  - `AppMetadata` via `package_info_plus`
+- DI manual:
+  - `GameLocalDataSourceImpl` -> `GameRepositoryImpl`
   - `SubmitGuessUseCase` / `GetRandomWordUseCase`
+  - `AuthCubit` e `GameCubit` em `MultiBlocProvider`
 
-### Fluxo principal
+### Fluxo principal do jogo
 ```text
 UI (BlocBuilder/BlocListener)
-  → GameCubit
-  → UseCases
-  → GameRepository
-  → GameRemoteDataSource (Supabase)
+  -> GameCubit
+  -> UseCases
+  -> GameRepository
+  -> GameLocalDataSource (SQLite asset words.db via sqflite)
 ```
 
-### Navegação
-- Fonte única: `lib/routes/app_routes.dart`.
-- Rotas nomeadas:
-  - `/` (`HomeScreen`)
-  - `/game/daily` (`GameDesktopScreen(mode: GameMode.daily)`)
-  - `/game/infinite` (`GameDesktopScreen(mode: GameMode.infinite)`)
-- `Navigator.pushNamed` é o padrão.
+### Navegacao
+Fonte unica: `lib/routes/app_routes.dart` com `Navigator.pushNamed`.
+
+Rotas:
+- `/` -> `HomeScreen`
+- `/game/daily/select` -> `DailyModeSelectionScreen`
+- `/game/daily` -> `GameDesktopScreen(mode: daily)`
+- `/game/daily/dueto` -> `GameDesktopScreen(mode: dailyDueto)`
+- `/game/daily/quarteto` -> `GameDesktopScreen(mode: dailyQuarteto)`
+- `/game/infinite` -> `GameDesktopScreen(mode: infinite)`
 
 ---
 
-## Convenções importantes
+## Modos de jogo e regras
 
-### BLoC/Cubit (não Provider)
-- Use `BlocBuilder` para render e `BlocListener` para efeitos colaterais.
-- Em callbacks/eventos, use `context.read<GameCubit>()` / `context.read<AuthCubit>()`.
-- Não reintroduzir `ChangeNotifier`/`Provider` para o fluxo principal.
+`GameMode`: `daily`, `dailyDueto`, `dailyQuarteto`, `infinite`.
 
-### Inicialização de jogo
-- Em `GameDesktopScreen`, `startGame(mode)` é chamado via `WidgetsBinding.instance.addPostFrameCallback` no `initState`.
-- Mantenha esse padrão para evitar acesso prematuro ao contexto.
+- `wordLength` oficial: **5** (`GameCubit.wordLength`)
+- Tentativas por modo (`GameCubit.maxAttemptsForMode`):
+  - `daily` e `infinite`: **6**
+  - `dailyDueto`: **7**
+  - `dailyQuarteto`: **9**
+- `wordCount` por modo:
+  - `daily`/`infinite`: 1 tabuleiro
+  - `dailyDueto`: 2 tabuleiros
+  - `dailyQuarteto`: 4 tabuleiros
 
-### Variáveis de ambiente (Supabase)
-- `main.dart` carrega `.env` com `flutter_dotenv`.
-- Chaves obrigatórias:
-  - `SUPABASE_URL`
-  - `SUPABASE_ANON_KEY`
-- Se ausentes, o app lança `StateError` no bootstrap.
+---
 
-### Lógica de jogo
-- Constantes oficiais:
-  - `GameCubit.maxAttempts = 6`
-  - `GameCubit.wordLength = 5`
-- Prioridade de cor do teclado (nunca downgrade), em `_updateKeyboardColors()`:
-  - `correct` nunca é sobrescrito
-  - `present` não é substituído por `absent`
+## Dados e persistencia
 
-### Persistência local (GetStorage)
-- Jogo diário:
+### Core do jogo (offline-first local)
+- O dicionario e palavras-alvo vem de `assets/words.db`.
+- `GameLocalDataSourceImpl` copia o DB de asset para armazenamento local (`words_v2.db`) e consulta a tabela `valid_words`.
+- `submitGuess` valida palavra e feedback localmente (sem chamada HTTP para gameplay).
+- Comparacao considera normalizacao de acentos (`normalizePortuguese`).
+
+### GetStorage
+- Diario por modo (prefixo `daily_${mode.supabaseKey.toLowerCase()}`):
+  - `${prefix}_date`
+  - `${prefix}_word_ids`
+  - `${prefix}_target_words`
+  - `${prefix}_board_guesses`
+  - `${prefix}_board_completed`
+  - `${prefix}_status`
+  - `${prefix}_keyboard_colors`
+- Retrocompatibilidade modo diario legado:
   - `daily_date`, `daily_word_id`, `daily_word`, `daily_guesses`, `daily_status`
-- Estatísticas infinito:
+- Infinito:
   - `infinite_wins`, `infinite_losses`, `infinite_streak`
-
-### Modos de jogo
-- `GameMode` possui: `daily`, `dailyDueto`, `dailyQuarteto`, `infinite`.
-- UI/rotas expõem atualmente `daily` e `infinite`.
-- `GameModeExtension.supabaseKey` mapeia:
-  - `daily`/`infinite` → `TERMO`
-  - `dailyDueto` → `DUETO`
-  - `dailyQuarteto` → `QUARTETO`
-
-### Idioma e UX
-- Strings de UI em português (pt-BR).
-- Componentes visuais privados e específicos devem ficar no mesmo arquivo (`_ClassePrivada`).
-
-### Paleta
-- `correct` `#538D4E`
-- `present` `#B59F3B`
-- `absent` `#3A3A3C`
-- `unknown` `#818384`
-- `background` `#121213`
-- `cardBg` `#1A1A1B`
+- Configuracoes:
+  - `victory_sound_enabled`, `click_sound_enabled`, `gradients_enabled`
 
 ---
 
-## Backends e integração
+## Supabase (uso atual)
 
-### Supabase (principal do jogo)
-- Desafio diário: consulta `daily_challenges` por `play_date` + `game_mode`.
-- Dicionário e alvo: tabela `valid_words`.
-- `submitGuess` valida palavra no dicionário e aplica feedback localmente (`correct/present/absent`).
+Supabase **nao** e a fonte principal do gameplay atual. E usado para:
 
-### FastAPI (uso pontual)
-- `StatsDialog` busca estatísticas remotas em `GET http://127.0.0.1:8000/api/v1/stats` quando usuário autenticado.
-- Para usuário anônimo, usa dados locais do GetStorage.
+1. **Autenticacao**
+   - `AuthCubit` escuta `onAuthStateChange`
+   - login Google via `signInWithOAuth`
+   - logout via `signOut`
+   - redirect OAuth: `termofication://login-callback`
 
-### ApiClient
-- Base URL padrão:
-  - Web/Desktop: `http://127.0.0.1:8000`
-  - Android/iOS: `http://192.168.0.104:8000`
-- Exceções padronizadas:
-  - `InvalidWordException`
-  - `NetworkException`
-  - `ServerException`
+2. **Estatisticas remotas** (`user_stats`)
+   - `GameRepositoryImpl.syncInfiniteStats()` puxa stats remotas para local
+   - `GameRepositoryImpl.recordGame()` faz upsert em `user_stats`
+   - `StatsDialog` tenta leitura remota; se falhar/anonimo, usa fallback local (GetStorage)
 
 ---
 
-## Testes
+## Convencoes de implementacao
 
-- `test/features/game/presentation/cubit/game_cubit_test.dart` cobre fluxo principal do `GameCubit`.
-- `test/features/game/data/models/guess_result_model_test.dart` cobre serialização/desserialização de modelos.
-- `test/widget_test.dart` é smoke test placeholder.
+### Estado/UI
+- Nao reintroduzir `Provider`/`ChangeNotifier` no fluxo principal.
+- Usar `BlocBuilder` para render e `BlocListener` para side-effects.
+- Em callbacks, usar `context.read<GameCubit>()` / `context.read<AuthCubit>()`.
+- Em `GameDesktopScreen`, iniciar jogo com `startGame(mode)` via `addPostFrameCallback` no `initState`.
+
+### Multi-board (dueto/quarteto)
+- Respeitar estruturas por tabuleiro:
+  - `boardGuesses`
+  - `boardKeyboardColors`
+  - `boardCompleted`
+- Teclado virtual usa cor por letra por tabuleiro (split visual em 2/4 quadrantes).
+
+### Prioridade de cor do teclado
+Em `GameCubit._updateKeyboardColors()`:
+- `correct` nunca sofre downgrade
+- `present` nao vira `absent`
+
+### Erros e mensagens
+- Strings da UI em portugues (pt-BR).
+- Erros de jogada aparecem em `FloatingToast`.
+- Evitar silenciar erros sem ao menos logar quando houver padrao de logging no contexto.
+
+### Componentizacao visual
+- Componentes privados e especificos de tela ficam no mesmo arquivo (`_WidgetPrivado`).
+- Manter estilo visual atual (glassmorphism, gradientes, etc.) quando editar UI existente.
+
+---
+
+## Cores oficiais
+- `correct`: `#538D4E`
+- `present`: `#B59F3B`
+- `absent`: `#3A3A3C`
+- `unknown`: `#818384`
+- `background`: `#121213`
+- `cardBg`: `#1A1A1B`
+
+---
+
+## Testes existentes
+- `test/features/game/presentation/cubit/game_cubit_test.dart`:
+  - fluxo principal do `GameCubit`
+  - normalizacao de acentos no teclado
+- `test/features/game/data/models/guess_result_model_test.dart`:
+  - serializacao/desserializacao dos models
+- `test/widget_test.dart`:
+  - smoke test placeholder
+
+---
+
+## Notas de manutencao
+- `ApiClient` e excecoes (`InvalidWordException`, `NetworkException`, `ServerException`) ainda existem em `core/network/api_client.dart`, mas o gameplay atual e majoritariamente local (SQLite).
+- Ha comentarios legados no codigo mencionando `GameRemoteDataSourceImpl`; trate-os como historicos e nao como arquitetura vigente.
