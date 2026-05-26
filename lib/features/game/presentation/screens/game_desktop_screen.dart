@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/services/audio_service.dart';
 import '../../domain/entities/game_enums.dart';
 import '../cubit/game_cubit.dart';
 import '../cubit/game_state.dart';
@@ -90,7 +91,10 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back, color: AppColors.textWhite),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              AudioService.playClick();
+              Navigator.of(context).pop();
+            },
           ),
           actions: [
             BlocBuilder<GameCubit, GameState>(
@@ -151,6 +155,9 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
 
             if (hasFinished && wasPlaying) {
               _showResultDialog(context, state);
+              if (state.status == GameStatus.won) {
+                AudioService.playVictory();
+              }
             }
 
             _lastStatus = state.status;
@@ -566,6 +573,7 @@ class _ResultDialog extends StatelessWidget {
                       height: 50,
                       child: ElevatedButton.icon(
                         onPressed: () {
+                          AudioService.playClick();
                           Navigator.pop(context); // Close dialog
                           parentContext.read<GameCubit>().startGame(
                             state.mode,
@@ -597,9 +605,10 @@ class _ResultDialog extends StatelessWidget {
                         child: SizedBox(
                           height: 46,
                           child: OutlinedButton(
-                            onPressed: () => Navigator.pop(
-                              context,
-                            ), // Close dialog to inspect grid
+                            onPressed: () {
+                              AudioService.playClick();
+                              Navigator.pop(context);
+                            }, // Close dialog to inspect grid
                             style: OutlinedButton.styleFrom(
                               side: const BorderSide(
                                 color: AppColors.borderActive,
@@ -619,6 +628,7 @@ class _ResultDialog extends StatelessWidget {
                           height: 46,
                           child: OutlinedButton(
                             onPressed: () {
+                              AudioService.playClick();
                               Navigator.pop(context); // Close dialog
                               Navigator.pop(parentContext); // Exit game
                             },

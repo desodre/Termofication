@@ -43,6 +43,7 @@ dependencies:
   sqflite: ^2.3.0
   path: ^1.9.0
   package_info_plus: ^10.1.0
+  audioplayers: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -69,6 +70,7 @@ flutter:
     - .env
     - assets/words.db
     - assets/icons/Google _G_ Logo.png
+    - assets/sounds/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

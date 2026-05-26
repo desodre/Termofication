@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_colors.dart';
+import '../core/services/audio_service.dart';
 import '../routes/app_routes.dart';
 import '../widgets/app_drawer.dart';
 
@@ -179,7 +180,10 @@ class _MenuButtonState extends State<_MenuButton> {
       onTapDown: (_) => setState(() => _isPressed = true),
       onTapUp: (_) => setState(() => _isPressed = false),
       onTapCancel: () => setState(() => _isPressed = false),
-      onTap: widget.onTap,
+      onTap: () {
+        AudioService.playClick();
+        widget.onTap();
+      },
       child: AnimatedScale(
         scale: _isPressed ? 0.9 : 1.0,
         duration: const Duration(milliseconds: 100),
@@ -239,7 +243,10 @@ class _ModeCardState extends State<_ModeCard> {
           onTapDown: (_) => setState(() => _isPressed = true),
           onTapUp: (_) => setState(() => _isPressed = false),
           onTapCancel: () => setState(() => _isPressed = false),
-          onTap: () => Navigator.pushNamed(context, widget.route),
+          onTap: () {
+            AudioService.playClick();
+            Navigator.pushNamed(context, widget.route);
+          },
           child: AnimatedScale(
             scale: _isPressed ? 0.95 : (_isHovered ? 1.03 : 1.0),
             duration: const Duration(milliseconds: 100),
