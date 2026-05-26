@@ -44,24 +44,13 @@ class AppDrawer extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
                   child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: AppColors.correct.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.correct.withValues(alpha: 0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: const Text(
-                          'T',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.correct,
-                            letterSpacing: 2,
-                          ),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.asset(
+                          'assets/icons/termofication_logo_clean.png',
+                          height: 42,
+                          width: 42,
+                          fit: BoxFit.cover,
                         ),
                       ),
                       const SizedBox(width: 14),
