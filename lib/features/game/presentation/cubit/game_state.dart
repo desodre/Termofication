@@ -16,6 +16,8 @@ class GameState {
   final List<Map<String, LetterStatus>> boardKeyboardColors;
   final List<bool> boardCompleted;
   final String? errorMessage;
+  final List<int> newlyCorrectBoardIndices;
+  final int correctBoardNonce;
 
   // Estatísticas do modo Infinito
   final int infiniteWins;
@@ -37,6 +39,8 @@ class GameState {
     this.boardKeyboardColors = const [],
     this.boardCompleted = const [],
     this.errorMessage,
+    this.newlyCorrectBoardIndices = const [],
+    this.correctBoardNonce = 0,
     this.infiniteWins = 0,
     this.infiniteLosses = 0,
     this.infiniteStreak = 0,
@@ -58,6 +62,8 @@ class GameState {
     List<bool>? boardCompleted,
     String? errorMessage,
     bool clearError = false,
+    List<int>? newlyCorrectBoardIndices,
+    int? correctBoardNonce,
     int? infiniteWins,
     int? infiniteLosses,
     int? infiniteStreak,
@@ -77,6 +83,8 @@ class GameState {
       boardKeyboardColors: boardKeyboardColors ?? this.boardKeyboardColors,
       boardCompleted: boardCompleted ?? this.boardCompleted,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      newlyCorrectBoardIndices: newlyCorrectBoardIndices ?? this.newlyCorrectBoardIndices,
+      correctBoardNonce: correctBoardNonce ?? this.correctBoardNonce,
       infiniteWins: infiniteWins ?? this.infiniteWins,
       infiniteLosses: infiniteLosses ?? this.infiniteLosses,
       infiniteStreak: infiniteStreak ?? this.infiniteStreak,

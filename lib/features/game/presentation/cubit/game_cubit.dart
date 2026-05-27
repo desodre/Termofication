@@ -59,6 +59,8 @@ class GameCubit extends Cubit<GameState> {
           (_) => <String, LetterStatus>{},
         ),
         boardCompleted: List.generate(boardCount, (_) => false),
+        newlyCorrectBoardIndices: const [],
+        correctBoardNonce: 0,
         clearError: true,
       ),
     );
@@ -131,6 +133,8 @@ class GameCubit extends Cubit<GameState> {
           keyboardColors: mergedKeyboard,
           boardKeyboardColors: boardKeyboardColors,
           boardCompleted: normalizedBoardCompleted,
+          newlyCorrectBoardIndices: const [],
+          correctBoardNonce: 0,
         ),
       );
       return;
@@ -164,6 +168,8 @@ class GameCubit extends Cubit<GameState> {
           keyboardColors: {},
           boardKeyboardColors: boardKeyboardColors,
           boardCompleted: boardCompleted,
+          newlyCorrectBoardIndices: const [],
+          correctBoardNonce: 0,
         ),
       );
       await _saveDailyState();
@@ -215,6 +221,8 @@ class GameCubit extends Cubit<GameState> {
         keyboardColors: const {},
         boardKeyboardColors: const <Map<String, LetterStatus>>[{}],
         boardCompleted: const [false],
+        newlyCorrectBoardIndices: const [],
+        correctBoardNonce: 0,
       ),
     );
   }
@@ -346,6 +354,18 @@ class GameCubit extends Cubit<GameState> {
         return wasCompleted || results[index].isCorrect;
       });
 
+      final List<int> newlyCorrectBoardIndices = [];
+      for (int i = 0; i < targetWordIds.length; i++) {
+        final wasCompleted = i < state.boardCompleted.length && state.boardCompleted[i];
+        final isCompletedNow = updatedBoardCompleted[i];
+        if (!wasCompleted && isCompletedNow) {
+          newlyCorrectBoardIndices.add(i);
+        }
+      }
+      final int correctBoardNonce = newlyCorrectBoardIndices.isNotEmpty
+          ? state.correctBoardNonce + 1
+          : state.correctBoardNonce;
+
       final attemptsUsed = updatedBoardGuesses.isNotEmpty
           ? updatedBoardGuesses.fold<int>(
               0,
@@ -457,6 +477,8 @@ class GameCubit extends Cubit<GameState> {
           keyboardColors: updatedKeyboard,
           boardKeyboardColors: updatedBoardKeyboard,
           boardCompleted: updatedBoardCompleted,
+          newlyCorrectBoardIndices: newlyCorrectBoardIndices,
+          correctBoardNonce: correctBoardNonce,
           infiniteWins: wins,
           infiniteLosses: losses,
           infiniteStreak: streak,

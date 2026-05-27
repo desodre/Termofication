@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../domain/entities/game_enums.dart';
 
@@ -8,6 +9,7 @@ class LetterTile extends StatefulWidget {
   final double size;
   final Duration? animationDelay;
   final bool isSelected;
+  final bool shouldBounce;
 
   const LetterTile({
     super.key,
@@ -16,6 +18,7 @@ class LetterTile extends StatefulWidget {
     this.size = 56,
     this.animationDelay,
     this.isSelected = false,
+    this.shouldBounce = false,
   });
 
   @override
@@ -28,6 +31,9 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
 
   late AnimationController _popController;
   late Animation<double> _popAnimation;
+
+  late AnimationController _bounceController;
+  late Animation<double> _bounceAnimation;
 
   @override
   void initState() {
@@ -64,6 +70,28 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
       ),
     ]).animate(_popController);
 
+    // Bounce Animation (Translation Bounce)
+    _bounceController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _bounceAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: 0.0,
+          end: -16.0,
+        ).chain(CurveTween(curve: Curves.easeOutQuad)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween<double>(
+          begin: -16.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.bounceOut)),
+        weight: 60,
+      ),
+    ]).animate(_bounceController);
+
     // If game loads with pre-existing feedback, display it flipped immediately
     if (widget.status != LetterStatus.unknown) {
       _flipController.value = 1.0;
@@ -94,19 +122,32 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
         oldWidget.status != LetterStatus.unknown) {
       _flipController.value = 0.0;
     }
+
+    // 4. Trigger bounce animation when shouldBounce turns true
+    if (widget.shouldBounce && !oldWidget.shouldBounce) {
+      final bool animationsEnabled = GetStorage().read<bool>('animations_enabled') ?? true;
+      if (animationsEnabled) {
+        Future.delayed(widget.animationDelay ?? Duration.zero, () {
+          if (mounted) {
+            _bounceController.forward(from: 0.0);
+          }
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
     _flipController.dispose();
     _popController.dispose();
+    _bounceController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_flipAnimation, _popAnimation]),
+      animation: Listenable.merge([_flipAnimation, _popAnimation, _bounceAnimation]),
       builder: (context, child) {
         final flipVal = _flipAnimation.value;
         final isFront = flipVal <= 0.5;
@@ -144,50 +185,54 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
         }
 
         final double scaleVal = _popAnimation.value;
+        final double bounceVal = _bounceAnimation.value;
 
-        return Transform.scale(
-          scale: scaleVal,
-          child: Transform(
-            transform: Matrix4.identity()
-              ..setEntry(3, 2, 0.002) // 3D Perspective!
-              ..rotateY(angle),
-            alignment: Alignment.center,
-            child: Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                color: backgroundColor,
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: widget.isSelected && currentStatus == LetterStatus.unknown
-                      ? AppColors.textWhite
-                      : borderColor,
-                  width: widget.isSelected && currentStatus == LetterStatus.unknown ? 3 : 2,
+        return Transform.translate(
+          offset: Offset(0, bounceVal),
+          child: Transform.scale(
+            scale: scaleVal,
+            child: Transform(
+              transform: Matrix4.identity()
+                ..setEntry(3, 2, 0.002) // 3D Perspective!
+                ..rotateY(angle),
+              alignment: Alignment.center,
+              child: Container(
+                width: widget.size,
+                height: widget.size,
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                    color: widget.isSelected && currentStatus == LetterStatus.unknown
+                        ? AppColors.textWhite
+                        : borderColor,
+                    width: widget.isSelected && currentStatus == LetterStatus.unknown ? 3 : 2,
+                  ),
+                  boxShadow: currentStatus != LetterStatus.unknown
+                      ? [
+                          BoxShadow(
+                            color: backgroundColor.withValues(alpha: 0.35),
+                            blurRadius: 12,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 2),
+                          ),
+                          BoxShadow(
+                            color: backgroundColor.withValues(alpha: 0.15),
+                            blurRadius: 24,
+                            spreadRadius: 2,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
                 ),
-                boxShadow: currentStatus != LetterStatus.unknown
-                    ? [
-                        BoxShadow(
-                          color: backgroundColor.withValues(alpha: 0.35),
-                          blurRadius: 12,
-                          spreadRadius: 1,
-                          offset: const Offset(0, 2),
-                        ),
-                        BoxShadow(
-                          color: backgroundColor.withValues(alpha: 0.15),
-                          blurRadius: 24,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Center(
-                child: Text(
-                  widget.letter.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: widget.size * 0.45,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textWhite,
+                child: Center(
+                  child: Text(
+                    widget.letter.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: widget.size * 0.45,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textWhite,
+                    ),
                   ),
                 ),
               ),

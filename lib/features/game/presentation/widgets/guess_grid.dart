@@ -7,7 +7,7 @@ import '../cubit/game_state.dart';
 import 'letter_tile.dart';
 import 'shake_widget.dart';
 
-class GuessGrid extends StatelessWidget {
+class GuessGrid extends StatefulWidget {
   final int boardIndex;
   final int maxAttempts;
   final double tileSize;
@@ -22,23 +22,55 @@ class GuessGrid extends StatelessWidget {
   });
 
   @override
+  State<GuessGrid> createState() => _GuessGridState();
+}
+
+class _GuessGridState extends State<GuessGrid> {
+  int _lastCorrectNonce = 0;
+  int _bounceRowIndex = -1;
+
+  @override
   Widget build(BuildContext context) {
-    return BlocBuilder<GameCubit, GameState>(
+    return BlocConsumer<GameCubit, GameState>(
+      listenWhen: (previous, current) =>
+          current.correctBoardNonce != previous.correctBoardNonce,
+      listener: (context, state) {
+        if (state.correctBoardNonce == 0) {
+          setState(() {
+            _lastCorrectNonce = 0;
+            _bounceRowIndex = -1;
+          });
+        } else if (state.correctBoardNonce > _lastCorrectNonce) {
+          _lastCorrectNonce = state.correctBoardNonce;
+          // Check if this board index is in newlyCorrectBoardIndices
+          if (state.newlyCorrectBoardIndices.contains(widget.boardIndex)) {
+            final guesses = widget.boardIndex < state.boardGuesses.length
+                ? state.boardGuesses[widget.boardIndex]
+                : const <GuessResult>[];
+            if (guesses.isNotEmpty) {
+              setState(() {
+                _bounceRowIndex = guesses.length - 1;
+              });
+            }
+          }
+        }
+      },
       builder: (context, state) {
-        final guesses = boardIndex < state.boardGuesses.length
-            ? state.boardGuesses[boardIndex]
+        final guesses = widget.boardIndex < state.boardGuesses.length
+            ? state.boardGuesses[widget.boardIndex]
             : const <GuessResult>[];
-        final boardCompleted = boardIndex < state.boardCompleted.length
-            ? state.boardCompleted[boardIndex]
+        final boardCompleted = widget.boardIndex < state.boardCompleted.length
+            ? state.boardCompleted[widget.boardIndex]
             : false;
         final currentGuess = state.currentGuess;
         const wordLength = GameCubit.wordLength;
 
         return Column(
           mainAxisSize: MainAxisSize.min,
-          children: List.generate(maxAttempts, (row) {
+          children: List.generate(widget.maxAttempts, (row) {
             if (row < guesses.length) {
               final result = guesses[row];
+              final isBounceRow = row == _bounceRowIndex;
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
@@ -46,11 +78,12 @@ class GuessGrid extends StatelessWidget {
                   children: List.generate(wordLength, (col) {
                     final fb = result.feedback[col];
                     return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: tilePadding),
+                      padding: EdgeInsets.symmetric(horizontal: widget.tilePadding),
                       child: LetterTile(
                         letter: fb.letter,
                         status: fb.status,
-                        size: tileSize,
+                        size: widget.tileSize,
+                        shouldBounce: isBounceRow,
                         animationDelay: Duration(milliseconds: col * 150),
                       ),
                     );
@@ -73,13 +106,13 @@ class GuessGrid extends StatelessWidget {
                           : ' ';
                       final letter = char == ' ' ? '' : char;
                       return Padding(
-                        padding: EdgeInsets.symmetric(horizontal: tilePadding),
+                        padding: EdgeInsets.symmetric(horizontal: widget.tilePadding),
                         child: GestureDetector(
                           onTap: () => context.read<GameCubit>().setCursor(col),
                           child: LetterTile(
                             letter: letter,
                             status: LetterStatus.unknown,
-                            size: tileSize,
+                            size: widget.tileSize,
                             isSelected: col == state.cursorIndex,
                           ),
                         ),
@@ -95,8 +128,8 @@ class GuessGrid extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(wordLength, (_) {
                     return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: tilePadding),
-                      child: LetterTile(letter: '', size: tileSize),
+                      padding: EdgeInsets.symmetric(horizontal: widget.tilePadding),
+                      child: LetterTile(letter: '', size: widget.tileSize),
                     );
                   }),
                 ),

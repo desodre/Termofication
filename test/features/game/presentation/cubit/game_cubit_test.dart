@@ -241,5 +241,30 @@ void main() {
       expect(cubit.state.keyboardColors['E'], LetterStatus.correct);
       expect(cubit.state.keyboardColors['É'], isNull);
     });
+
+    test('deve atualizar newlyCorrectBoardIndices e correctBoardNonce ao acertar a palavra, e resetá-los ao iniciar um novo jogo', () async {
+      mockRepository.nextWordId = 1; // Maps to 'termo'
+      await cubit.startGame(GameMode.infinite);
+
+      expect(cubit.state.newlyCorrectBoardIndices, isEmpty);
+      expect(cubit.state.correctBoardNonce, 0);
+
+      cubit.addLetter('t');
+      cubit.addLetter('e');
+      cubit.addLetter('r');
+      cubit.addLetter('m');
+      cubit.addLetter('o');
+
+      await cubit.submitGuess();
+
+      expect(cubit.state.newlyCorrectBoardIndices, contains(0));
+      expect(cubit.state.correctBoardNonce, 1);
+
+      // Start new game should reset them
+      await cubit.startGame(GameMode.infinite);
+
+      expect(cubit.state.newlyCorrectBoardIndices, isEmpty);
+      expect(cubit.state.correctBoardNonce, 0);
+    });
   });
 }

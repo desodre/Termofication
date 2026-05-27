@@ -16,6 +16,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
   late bool _victorySound;
   late bool _clickSound;
   late bool _gradientsEnabled;
+  late bool _animationsEnabled;
 
   @override
   void initState() {
@@ -23,6 +24,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     _victorySound = _storage.read<bool>('victory_sound_enabled') ?? true;
     _clickSound = _storage.read<bool>('click_sound_enabled') ?? false;
     _gradientsEnabled = _storage.read<bool>('gradients_enabled') ?? true;
+    _animationsEnabled = _storage.read<bool>('animations_enabled') ?? true;
   }
 
   void _toggleVictorySound(bool value) {
@@ -49,6 +51,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
     setState(() {
       _gradientsEnabled = value;
       _storage.write('gradients_enabled', value);
+    });
+  }
+
+  void _toggleAnimations(bool value) {
+    AudioService.playClick();
+    setState(() {
+      _animationsEnabled = value;
+      _storage.write('animations_enabled', value);
     });
   }
 
@@ -140,6 +150,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
               subtitle: 'Fundo ambientado por modo',
               value: _gradientsEnabled,
               onChanged: _toggleGradients,
+              activeColor: AppColors.correct,
+            ),
+            _SettingSwitchTile(
+              title: 'Animações de Acerto',
+              subtitle: 'Efeito de salto nas letras ao acertar',
+              value: _animationsEnabled,
+              onChanged: _toggleAnimations,
               activeColor: AppColors.correct,
             ),
             const SizedBox(height: 24),
