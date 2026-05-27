@@ -82,7 +82,7 @@ class TermoApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      initialRoute: AppRoutes.home,
+      initialRoute: AppRoutes.splash,
       routes: AppRoutes.routes,
     );
   }

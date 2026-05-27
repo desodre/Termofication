@@ -39,6 +39,10 @@ class GameCubit extends Cubit<GameState> {
     this.authCubit,
   }) : super(const GameState());
 
+  Future<void> warmUp() async {
+    await repository.warmUp();
+  }
+
   Future<void> startGame(GameMode mode) async {
     final boardCount = mode.wordCount;
 

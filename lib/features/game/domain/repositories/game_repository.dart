@@ -7,6 +7,7 @@ abstract class GameRepository {
   Future<Challenge> getRandomChallenge({int length = 5});
   Future<GuessResult> submitGuess(String guess, int wordId);
   Future<String> revealWord(int wordId);
+  Future<void> warmUp();
 
   // Persistência local (GetStorage ou similar)
   Future<void> saveDailyGame({

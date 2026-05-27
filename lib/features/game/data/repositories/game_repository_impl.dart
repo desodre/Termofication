@@ -36,6 +36,11 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
+  Future<void> warmUp() async {
+    await localDataSource.warmUp();
+  }
+
+  @override
   Future<void> saveDailyGame({
     required GameMode mode,
     required String date,

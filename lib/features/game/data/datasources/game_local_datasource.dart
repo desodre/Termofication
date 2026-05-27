@@ -12,6 +12,7 @@ import '../models/guess_result_model.dart';
 import '../models/letter_feedback_model.dart';
 
 abstract class GameLocalDataSource {
+  Future<void> warmUp();
   Future<ChallengeModel> getDailyChallenge({String gameMode = 'TERMO'});
   Future<ChallengeModel> getRandomChallenge(int length);
   Future<GuessResultModel> submitGuess(String guess, int wordId);
@@ -65,6 +66,11 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
 
     _database = await openDatabase(path, readOnly: true);
     return _database!;
+  }
+
+  @override
+  Future<void> warmUp() async {
+    await _getDatabase();
   }
 
   List<Map<String, dynamic>> _evaluateGuess(String guess, String secret) {

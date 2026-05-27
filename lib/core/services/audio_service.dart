@@ -15,7 +15,7 @@ class AudioService {
 
     try {
       await _clickPlayer.stop();
-      await _clickPlayer.play(AssetSource('sounds/button_click.mp3'));
+      await _clickPlayer.play(AssetSource('sounds/click_sound.mp3'));
     } catch (e) {
       // Ignora falhas de áudio silenciosamente em produção
       developer.log('AudioService: Erro ao tocar som de clique: $e', name: 'AudioService', error: e);
