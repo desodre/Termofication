@@ -68,73 +68,65 @@ class _GuessGridState extends State<GuessGrid> {
         return Column(
           mainAxisSize: MainAxisSize.min,
           children: List.generate(widget.maxAttempts, (row) {
-            if (row < guesses.length) {
+            final isCompleted = row < guesses.length;
+            final isActive = row == guesses.length &&
+                !boardCompleted &&
+                (state.status == GameStatus.playing ||
+                    state.status == GameStatus.submitting);
+
+            // 1. Determine letters, statuses, and tap handlers
+            final List<String> letters = List.filled(wordLength, '');
+            final List<LetterStatus> statuses = List.filled(wordLength, LetterStatus.unknown);
+            final List<bool> selecteds = List.filled(wordLength, false);
+            VoidCallback? Function(int col)? getOnTap;
+
+            if (isCompleted) {
               final result = guesses[row];
-              final isBounceRow = row == _bounceRowIndex;
-              return Padding(
+              for (int col = 0; col < wordLength; col++) {
+                final fb = result.feedback[col];
+                letters[col] = fb.letter;
+                statuses[col] = fb.status;
+              }
+            } else if (isActive) {
+              for (int col = 0; col < wordLength; col++) {
+                final char = col < currentGuess.length ? currentGuess[col] : ' ';
+                letters[col] = char == ' ' ? '' : char;
+                statuses[col] = LetterStatus.unknown;
+                selecteds[col] = col == state.cursorIndex;
+              }
+              getOnTap = (col) => () => context.read<GameCubit>().setCursor(col);
+            } else {
+              // Empty row
+            }
+
+            final isBounceRow = isCompleted && row == _bounceRowIndex;
+
+            // 2. Build the unified widget tree to preserve LetterTileState
+            return ShakeWidget(
+              trigger: isActive ? state.errorMessage : null,
+              child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(wordLength, (col) {
-                    final fb = result.feedback[col];
                     return Padding(
                       padding: EdgeInsets.symmetric(horizontal: widget.tilePadding),
-                      child: LetterTile(
-                        letter: fb.letter,
-                        status: fb.status,
-                        size: widget.tileSize,
-                        shouldBounce: isBounceRow,
-                        animationDelay: Duration(milliseconds: col * 150),
+                      child: GestureDetector(
+                        onTap: getOnTap?.call(col),
+                        child: LetterTile(
+                          letter: letters[col],
+                          status: statuses[col],
+                          size: widget.tileSize,
+                          shouldBounce: isBounceRow,
+                          isSelected: selecteds[col],
+                          animationDelay: Duration(milliseconds: col * 150),
+                        ),
                       ),
                     );
                   }),
                 ),
-              );
-            } else if (row == guesses.length &&
-                !boardCompleted &&
-                (state.status == GameStatus.playing ||
-                    state.status == GameStatus.submitting)) {
-              return ShakeWidget(
-                trigger: state.errorMessage,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 3),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: List.generate(wordLength, (col) {
-                      final char = col < currentGuess.length
-                          ? currentGuess[col]
-                          : ' ';
-                      final letter = char == ' ' ? '' : char;
-                      return Padding(
-                        padding: EdgeInsets.symmetric(horizontal: widget.tilePadding),
-                        child: GestureDetector(
-                          onTap: () => context.read<GameCubit>().setCursor(col),
-                          child: LetterTile(
-                            letter: letter,
-                            status: LetterStatus.unknown,
-                            size: widget.tileSize,
-                            isSelected: col == state.cursorIndex,
-                          ),
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              );
-            } else {
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(wordLength, (_) {
-                    return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: widget.tilePadding),
-                      child: LetterTile(letter: '', size: widget.tileSize),
-                    );
-                  }),
-                ),
-              );
-            }
+              ),
+            );
           }),
         );
       },

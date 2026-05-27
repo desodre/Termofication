@@ -157,9 +157,22 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
                   _lastStatus == GameStatus.loading;
 
               if (hasFinished && wasPlaying) {
-                _showResultDialog(context, state);
+                final currentCubit = context.read<GameCubit>();
+                final delayMs = state.status == GameStatus.won ? 2000 : 1200;
+                Future.delayed(Duration(milliseconds: delayMs), () {
+                  if (!context.mounted) return;
+                  if (currentCubit.state.status == GameStatus.won ||
+                      currentCubit.state.status == GameStatus.lost) {
+                    _showResultDialog(context, currentCubit.state);
+                  }
+                });
                 if (state.status == GameStatus.won) {
-                  AudioService.playVictory();
+                  Future.delayed(const Duration(milliseconds: 400), () {
+                    if (!context.mounted) return;
+                    if (currentCubit.state.status == GameStatus.won) {
+                      AudioService.playVictory();
+                    }
+                  });
                 }
               }
 
