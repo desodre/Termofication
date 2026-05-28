@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:termofication_app/widgets/build_in_mode_card.dart';
+import 'package:termofication_app/widgets/menu_button.dart';
+import 'package:termofication_app/widgets/mode_card.dart';
 import '../core/theme/app_colors.dart';
-import '../core/services/audio_service.dart';
 import '../routes/app_routes.dart';
 import '../widgets/app_drawer.dart';
 
@@ -67,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen>
               Positioned(
                 top: 12,
                 left: 12,
-                child: _MenuButton(
+                child: MenuButton(
                   onTap: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
               ),
@@ -135,7 +136,7 @@ class _HomeScreenState extends State<HomeScreen>
                         const SizedBox(height: 64),
 
                         // Interactive Glassmorphic Mode Cards
-                        const _ModeCard(
+                        const ModeCard(
                           label: 'PALAVRA DO DIA',
                           subtitle: 'Desafio único a cada 24 horas',
                           icon: Icons.calendar_today_rounded,
@@ -143,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen>
                           route: AppRoutes.dailyGameSelect,
                         ),
                         const SizedBox(height: 20),
-                        const _ModeCard(
+                        const ModeCard(
                           label: 'MODO INFINITO',
                           subtitle: 'Treine e jogue sem limites',
                           icon: Icons.all_inclusive_rounded,
@@ -163,190 +164,6 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Botão de menu hamburger com glassmorphism ──
-class _MenuButton extends StatefulWidget {
-  final VoidCallback onTap;
-  const _MenuButton({required this.onTap});
-
-  @override
-  State<_MenuButton> createState() => _MenuButtonState();
-}
-
-class _MenuButtonState extends State<_MenuButton> {
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: () {
-        AudioService.playClick();
-        widget.onTap();
-      },
-      child: AnimatedScale(
-        scale: _isPressed ? 0.9 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        child: Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: AppColors.textWhite.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: AppColors.textWhite.withValues(alpha: 0.1),
-              width: 1,
-            ),
-          ),
-          child: const Icon(
-            Icons.menu_rounded,
-            color: AppColors.textWhite,
-            size: 22,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Card de seleção de modo de jogo ──
-class _ModeCard extends StatefulWidget {
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final Color themeColor;
-  final String route;
-
-  const _ModeCard({
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-    required this.themeColor,
-    required this.route,
-  });
-
-  @override
-  State<_ModeCard> createState() => _ModeCardState();
-}
-
-class _ModeCardState extends State<_ModeCard> {
-  bool _isHovered = false;
-  bool _isPressed = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _isHovered = true),
-        onExit: (_) => setState(() => _isHovered = false),
-        child: GestureDetector(
-          onTapDown: (_) => setState(() => _isPressed = true),
-          onTapUp: (_) => setState(() => _isPressed = false),
-          onTapCancel: () => setState(() => _isPressed = false),
-          onTap: () {
-            AudioService.playClick();
-            Navigator.pushNamed(context, widget.route);
-          },
-          child: AnimatedScale(
-            scale: _isPressed ? 0.95 : (_isHovered ? 1.03 : 1.0),
-            duration: const Duration(milliseconds: 100),
-            curve: Curves.easeOut,
-            child: Container(
-              width: 320,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              decoration: BoxDecoration(
-                // Semi-transparent dynamic gradient based on game theme color
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    widget.themeColor.withValues(
-                      alpha: _isHovered ? 0.25 : 0.15,
-                    ),
-                    widget.themeColor.withValues(
-                      alpha: _isHovered ? 0.12 : 0.05,
-                    ),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: _isHovered
-                      ? widget.themeColor.withValues(alpha: 0.6)
-                      : widget.themeColor.withValues(alpha: 0.25),
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: widget.themeColor.withValues(
-                      alpha: _isHovered ? 0.18 : 0.05,
-                    ),
-                    blurRadius: _isHovered ? 20 : 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  // Symmetrical rounded backing for modern icons
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: widget.themeColor.withValues(alpha: 0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      widget.icon,
-                      color: widget.themeColor,
-                      size: 28,
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.label,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textWhite,
-                            letterSpacing: 2,
-                            shadows: [
-                              Shadow(
-                                color: widget.themeColor.withValues(alpha: 0.5),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          widget.subtitle,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textGray.withValues(alpha: 0.8),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Icons.arrow_forward_ios_rounded,
-                    color: widget.themeColor.withValues(alpha: 0.6),
-                    size: 16,
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ),

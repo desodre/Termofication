@@ -148,8 +148,18 @@ Em `GameCubit._updateKeyboardColors()`:
 - Evitar silenciar erros sem ao menos logar quando houver padrao de logging no contexto.
 
 ### Componentizacao visual
-- Componentes privados e especificos de tela ficam no mesmo arquivo (`_WidgetPrivado`).
+- Componentes globais e de layout reutilizáveis devem ser extraídos para arquivos separados sob as pastas `widgets/` correspondentes (ex: `lib/widgets/` ou `lib/features/game/presentation/widgets/`) para facilitar a testabilidade, legibilidade e manutenção futura.
+- Telas monolíticas grandes (como `GameDesktopScreen` ou `HomeScreen`) devem ser limpas de sub-widgets inline complexos.
 - Manter estilo visual atual (glassmorphism, gradientes, etc.) quando editar UI existente.
+
+## Widgets Extraídos (Modularizados)
+Os seguintes componentes foram extraídos de suas telas monolíticas de origem para facilitar a manutenção e testes:
+- `MenuButton` ([menu_button.dart](file:///home/desodre/Projects/termofication_app/lib/widgets/menu_button.dart)): Botão hamburger da tela inicial.
+- `ModeCard` ([mode_card.dart](file:///home/desodre/Projects/termofication_app/lib/widgets/mode_card.dart)): Cards de seleção de modo na tela inicial.
+- `DailyModeCard` ([daily_mode_card.dart](file:///home/desodre/Projects/termofication_app/lib/features/game/presentation/widgets/daily_mode_card.dart)): Cards de seleção do modo diário.
+- `BoardsLayout` e `BoardPanel` ([boards_layout.dart](file:///home/desodre/Projects/termofication_app/lib/features/game/presentation/widgets/boards_layout.dart)): Gerenciamento de layout dos tabuleiros de jogo (Termo, Dueto, Quarteto).
+- `ResultDialog` e `StatItem` ([result_dialog.dart](file:///home/desodre/Projects/termofication_app/lib/features/game/presentation/widgets/result_dialog.dart)): Diálogo de término de jogo e estatísticas.
+
 
 ---
 

@@ -66,27 +66,29 @@ Ambos os modos usam palavras de **5 letras** e permitem **6 tentativas**.
 
 ## Arquitetura
 
+O projeto utiliza uma estrutura modular inspirada em Clean Architecture por features, com gerenciamento de estado via **BLoC/Cubit**:
+
 ```
 lib/
-├── main.dart                     # Inicialização: GetStorage.init + ChangeNotifierProvider
-├── routes/
-│   └── app_routes.dart           # Rotas nomeadas
-├── models/
-│   ├── game_enums.dart           # GameMode, GameStatus, LetterStatus
-│   ├── letter_feedback.dart      # Feedback por letra (fromJson/toJson)
-│   └── guess_result.dart         # Resultado de um palpite (fromJson/toJson)
-├── services/
-│   └── api_service.dart          # Chamadas HTTP à API
-├── providers/
-│   └── game_provider.dart        # Todo o estado do jogo
-├── screens/
-│   ├── home_screen.dart          # Tela inicial com seleção de modo
-│   └── game_screen.dart          # Tela de jogo (compartilhada entre os modos)
-└── widgets/
-    ├── guess_grid.dart            # Grade 6×5 de palpites
-    ├── letter_tile.dart           # Tile individual colorido
-    └── keyboard_widget.dart       # Teclado QWERTY virtual
+├── core/                         # Serviços globais, utilitários, temas e sons
+├── features/game/                # Feature principal do jogo
+│   ├── data/                     # Data sources (SQLite local, Supabase), models, repositories
+│   ├── domain/                   # Entidades, use cases e definição de interfaces
+│   └── presentation/             # Cubits (gerenciamento de estado), screens e widgets específicos
+├── routes/                       # Configuração de rotas de navegação
+├── screens/                      # Telas globais do app (ex: HomeScreen, SplashScreen)
+└── widgets/                      # Widgets compartilhados e modulares
 ```
+
+### Modularização de Widgets
+Como parte do plano de melhoria arquitetural, extraímos sub-widgets privados e complexos de telas monolíticas para componentes públicos e independentes:
+- **`MenuButton`** ([menu_button.dart](file:///home/desodre/Projects/termofication_app/lib/widgets/menu_button.dart)): Botão hamburger da `HomeScreen`.
+- **`ModeCard`** ([mode_card.dart](file:///home/desodre/Projects/termofication_app/lib/widgets/mode_card.dart)): Cards de seleção de modo principal na `HomeScreen`.
+- **`BuildInModeCard`** ([build_in_mode_card.dart](file:///home/desodre/Projects/termofication_app/lib/widgets/build_in_mode_card.dart)): Card especial para modos em construção (como Multiplayer) com fita diagonal estilizada.
+- **`DailyModeCard`** ([daily_mode_card.dart](file:///home/desodre/Projects/termofication_app/lib/features/game/presentation/widgets/daily_mode_card.dart)): Card de seleção do modo diário.
+- **`BoardsLayout` & `BoardPanel`** ([boards_layout.dart](file:///home/desodre/Projects/termofication_app/lib/features/game/presentation/widgets/boards_layout.dart)): Renderização flexível e responsiva dos tabuleiros (1, 2 ou 4) com base no modo ativo.
+- **`ResultDialog` & `StatItem`** ([result_dialog.dart](file:///home/desodre/Projects/termofication_app/lib/features/game/presentation/widgets/result_dialog.dart)): Diálogo flutuante com BackdropFilter (blur) que consolida as estatísticas e permite reiniciar ou voltar.
+
 
 ### Fluxo de uma jogada
 
