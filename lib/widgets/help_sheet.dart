@@ -15,6 +15,9 @@ class HelpSheet extends StatelessWidget {
       filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
       child: Container(
         height: sheetHeight,
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewPadding.bottom,
+        ),
         decoration: BoxDecoration(
           color: const Color(0xFF1E1E22).withValues(alpha: 0.9),
           borderRadius: const BorderRadius.only(
