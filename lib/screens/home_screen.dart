@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:termofication_app/widgets/build_in_mode_card.dart';
 import '../core/theme/app_colors.dart';
 import '../core/services/audio_service.dart';
 import '../routes/app_routes.dart';
@@ -148,6 +149,13 @@ class _HomeScreenState extends State<HomeScreen>
                           icon: Icons.all_inclusive_rounded,
                           themeColor: AppColors.present,
                           route: AppRoutes.infiniteGame,
+                        ),
+                        const SizedBox(height: 20),
+                        const BuildInModeCard(
+                          label: 'MULTIPLAYER',
+                          subtitle: 'Jogue com amigos em tempo real',
+                          icon: Icons.group_rounded,
+                          themeColor: AppColors.multiplayerBackground,
                         ),
                       ],
                     ),

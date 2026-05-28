@@ -11,6 +11,13 @@ class AppColors {
     0xFF818384,
   ); // Cinza médio (não descoberto)
 
+  // Multiplayer
+  static const Color playerOne = Color(0xFF1E88E5); // Azul vibrante
+  static const Color playerTwo = Color(0xFFD32F2F); // Vermelho vibrante
+  static const Color playerThree = Color(0xFFFFC107); // Amarelo vibrante
+  static const Color playerFour = Color(0xFF4CAF50); // Verde vibrante
+
+  static const Color multiplayerBackground = Color(0x4A616D7E); // Fundo escuro para multiplayer
   // Cores do App
   static const Color background = Color(0xFF121213); // Fundo escuro premium
   static const Color cardBg = Color(0xFF1A1A1B); // Fundo do card de resultados
