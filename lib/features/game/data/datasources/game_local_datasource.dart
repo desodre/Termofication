@@ -21,7 +21,7 @@ abstract class GameLocalDataSource {
 
 // Versão do banco de dados local. Incrementar ao alterar o esquema da tabela
 // para forçar re-cópia do asset no próximo lançamento do app.
-const int _dbVersion = 3;
+const int _dbVersion = 4;
 
 class GameLocalDataSourceImpl implements GameLocalDataSource {
   Database? _database;
@@ -138,8 +138,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       final List<Map<String, dynamic>> targetWords = await db.query(
         'secret_words',
         columns: ['id'],
-        where: 'length = ? AND is_target = 1',
-        whereArgs: [5],
+        where: 'length = ? AND is_target = 1 AND words NOT LIKE ?',
+        whereArgs: [5, '%-%'],
         orderBy: 'id ASC',
       );
 
@@ -194,8 +194,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       final List<Map<String, dynamic>> targets = await db.query(
         'secret_words',
         columns: ['id'],
-        where: 'length = ? AND is_target = 1',
-        whereArgs: [length],
+        where: 'length = ? AND is_target = 1 AND words NOT LIKE ?',
+        whereArgs: [length, '%-%'],
         orderBy: 'id ASC',
       );
 
@@ -205,8 +205,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
         finalList = await db.query(
           'valid_words',
           columns: ['id'],
-          where: 'length = ?',
-          whereArgs: [length],
+          where: 'length = ? AND words NOT LIKE ?',
+          whereArgs: [length, '%-%'],
           orderBy: 'id ASC',
         );
       }
@@ -239,8 +239,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       List<Map<String, dynamic>> dictCheck = await db.query(
         'valid_words',
         columns: ['id'],
-        where: 'words = ?',
-        whereArgs: [cleanGuess],
+        where: 'words = ? AND words NOT LIKE ?',
+        whereArgs: [cleanGuess, '%-%'],
       );
 
       if (dictCheck.isEmpty) {
@@ -248,8 +248,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
         dictCheck = await db.query(
           'valid_words',
           columns: ['id'],
-          where: 'normalized = ?',
-          whereArgs: [normalizedGuess],
+          where: 'normalized = ? AND words NOT LIKE ?',
+          whereArgs: [normalizedGuess, '%-%'],
         );
       }
 
@@ -302,8 +302,8 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
       final List<Map<String, dynamic>> response = await db.query(
         'valid_words',
         columns: ['words'],
-        where: 'id = ?',
-        whereArgs: [wordId],
+        where: 'id = ? AND words NOT LIKE ?',
+        whereArgs: [wordId, '%-%'],
       );
 
       if (response.isEmpty) {

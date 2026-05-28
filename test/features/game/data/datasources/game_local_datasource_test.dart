@@ -27,8 +27,8 @@ void main() {
       when(() => mockDatabase.query(
             'secret_words',
             columns: ['id'],
-            where: 'length = ? AND is_target = 1',
-            whereArgs: [5],
+            where: 'length = ? AND is_target = 1 AND words NOT LIKE ?',
+            whereArgs: [5, '%-%'],
             orderBy: 'id ASC',
           )).thenAnswer((_) async => mockTargetWords);
 
@@ -39,8 +39,8 @@ void main() {
       verify(() => mockDatabase.query(
             'secret_words',
             columns: ['id'],
-            where: 'length = ? AND is_target = 1',
-            whereArgs: [5],
+            where: 'length = ? AND is_target = 1 AND words NOT LIKE ?',
+            whereArgs: [5, '%-%'],
             orderBy: 'id ASC',
           )).called(1);
     });
@@ -108,8 +108,8 @@ void main() {
       when(() => mockDatabase.query(
             'secret_words',
             columns: ['id'],
-            where: 'length = ? AND is_target = 1',
-            whereArgs: [5],
+            where: 'length = ? AND is_target = 1 AND words NOT LIKE ?',
+            whereArgs: [5, '%-%'],
             orderBy: 'id ASC',
           )).thenAnswer((_) async => [{'id': 42}]);
 
@@ -120,8 +120,8 @@ void main() {
       verify(() => mockDatabase.query(
             'secret_words',
             columns: ['id'],
-            where: 'length = ? AND is_target = 1',
-            whereArgs: [5],
+            where: 'length = ? AND is_target = 1 AND words NOT LIKE ?',
+            whereArgs: [5, '%-%'],
             orderBy: 'id ASC',
           )).called(1);
     });
@@ -131,8 +131,8 @@ void main() {
       when(() => mockDatabase.query(
             'secret_words',
             columns: ['id'],
-            where: 'length = ? AND is_target = 1',
-            whereArgs: [6],
+            where: 'length = ? AND is_target = 1 AND words NOT LIKE ?',
+            whereArgs: [6, '%-%'],
             orderBy: 'id ASC',
           )).thenAnswer((_) async => []);
 
@@ -140,8 +140,8 @@ void main() {
       when(() => mockDatabase.query(
             'valid_words',
             columns: ['id'],
-            where: 'length = ?',
-            whereArgs: [6],
+            where: 'length = ? AND words NOT LIKE ?',
+            whereArgs: [6, '%-%'],
             orderBy: 'id ASC',
           )).thenAnswer((_) async => [{'id': 99}]);
 
@@ -151,15 +151,15 @@ void main() {
       verify(() => mockDatabase.query(
             'secret_words',
             columns: ['id'],
-            where: 'length = ? AND is_target = 1',
-            whereArgs: [6],
+            where: 'length = ? AND is_target = 1 AND words NOT LIKE ?',
+            whereArgs: [6, '%-%'],
             orderBy: 'id ASC',
           )).called(1);
       verify(() => mockDatabase.query(
             'valid_words',
             columns: ['id'],
-            where: 'length = ?',
-            whereArgs: [6],
+            where: 'length = ? AND words NOT LIKE ?',
+            whereArgs: [6, '%-%'],
             orderBy: 'id ASC',
           )).called(1);
     });
@@ -171,8 +171,8 @@ void main() {
       when(() => mockDatabase.query(
             'valid_words',
             columns: ['id'],
-            where: 'words = ?',
-            whereArgs: ['termo'],
+            where: 'words = ? AND words NOT LIKE ?',
+            whereArgs: ['termo', '%-%'],
           )).thenAnswer((_) async => [{'id': 10}]);
 
       // Stub fetch secret word text in valid_words
@@ -193,8 +193,8 @@ void main() {
       verify(() => mockDatabase.query(
             'valid_words',
             columns: ['id'],
-            where: 'words = ?',
-            whereArgs: ['termo'],
+            where: 'words = ? AND words NOT LIKE ?',
+            whereArgs: ['termo', '%-%'],
           )).called(1);
       verify(() => mockDatabase.query(
             'valid_words',
@@ -209,8 +209,8 @@ void main() {
       when(() => mockDatabase.query(
             'valid_words',
             columns: ['id'],
-            where: 'words = ?',
-            whereArgs: ['porta'],
+            where: 'words = ? AND words NOT LIKE ?',
+            whereArgs: ['porta', '%-%'],
           )).thenAnswer((_) async => [{'id': 20}]);
 
       // Stub fetch secret word text
@@ -243,15 +243,15 @@ void main() {
       when(() => mockDatabase.query(
             'valid_words',
             columns: ['id'],
-            where: 'words = ?',
-            whereArgs: ['xxxxx'],
+            where: 'words = ? AND words NOT LIKE ?',
+            whereArgs: ['xxxxx', '%-%'],
           )).thenAnswer((_) async => []);
 
       when(() => mockDatabase.query(
             'valid_words',
             columns: ['id'],
-            where: 'normalized = ?',
-            whereArgs: ['xxxxx'],
+            where: 'normalized = ? AND words NOT LIKE ?',
+            whereArgs: ['xxxxx', '%-%'],
           )).thenAnswer((_) async => []);
 
       expect(
@@ -266,8 +266,8 @@ void main() {
       when(() => mockDatabase.query(
             'valid_words',
             columns: ['words'],
-            where: 'id = ?',
-            whereArgs: [42],
+            where: 'id = ? AND words NOT LIKE ?',
+            whereArgs: [42, '%-%'],
           )).thenAnswer((_) async => [{'words': 'sagaz'}]);
 
       final word = await dataSource.revealWord(42);
@@ -276,8 +276,8 @@ void main() {
       verify(() => mockDatabase.query(
             'valid_words',
             columns: ['words'],
-            where: 'id = ?',
-            whereArgs: [42],
+            where: 'id = ? AND words NOT LIKE ?',
+            whereArgs: [42, '%-%'],
           )).called(1);
     });
   });
