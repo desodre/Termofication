@@ -1,6 +1,7 @@
 import '../entities/challenge.dart';
 import '../entities/game_enums.dart';
 import '../entities/guess_result.dart';
+import '../entities/game_stats.dart';
 
 abstract class GameRepository {
   Future<Challenge> getDailyChallenge({GameMode mode = GameMode.daily});
@@ -23,17 +24,17 @@ abstract class GameRepository {
 
   Future<Map<String, dynamic>?> getDailyGame({required GameMode mode});
 
-  Future<void> saveInfiniteStats({
-    required int wins,
-    required int losses,
-    required int streak,
+  Future<GameStats> getStats({required GameMode mode});
+
+  Future<void> saveStats({
+    required GameMode mode,
+    required GameStats stats,
   });
 
-  Future<Map<String, int>> getInfiniteStats();
-
-  Future<void> syncInfiniteStats();
+  Future<void> syncStats({required GameMode mode});
 
   Future<void> recordGame({
+    required GameMode mode,
     required bool won,
     required int attempts,
   });

@@ -59,4 +59,18 @@ extension GameModeExtension on GameMode {
       this == GameMode.daily ||
       this == GameMode.dailyDueto ||
       this == GameMode.dailyQuarteto;
+
+  /// Mapeia para o identificador usado nas estatísticas de cada modo
+  String get statsKey {
+    switch (this) {
+      case GameMode.daily:
+        return 'DAILY';
+      case GameMode.dailyDueto:
+        return 'DAILY_DUETO';
+      case GameMode.dailyQuarteto:
+        return 'DAILY_QUARTETO';
+      case GameMode.infinite:
+        return 'INFINITE';
+    }
+  }
 }

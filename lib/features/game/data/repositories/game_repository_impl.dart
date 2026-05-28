@@ -4,6 +4,7 @@ import 'package:get_storage/get_storage.dart';
 import '../../domain/entities/challenge.dart';
 import '../../domain/entities/game_enums.dart';
 import '../../domain/entities/guess_result.dart';
+import '../../domain/entities/game_stats.dart';
 import '../../domain/repositories/game_repository.dart';
 import '../datasources/game_local_datasource.dart';
 import '../models/guess_result_model.dart';
@@ -188,23 +189,45 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
-  Future<void> saveInfiniteStats({
-    required int wins,
-    required int losses,
-    required int streak,
-  }) async {
-    await storage.write('infinite_wins', wins);
-    await storage.write('infinite_losses', losses);
-    await storage.write('infinite_streak', streak);
+  Future<GameStats> getStats({required GameMode mode}) async {
+    final key = 'stats_${mode.statsKey}';
+    final data = storage.read(key);
+    
+    if (data != null) {
+      return GameStats.fromJson(Map<String, dynamic>.from(data as Map));
+    }
+
+    // Se estiver vazio e for modo infinito, tenta fazer migração local das chaves antigas
+    if (mode == GameMode.infinite) {
+      final oldWins = storage.read<int>('infinite_wins');
+      final oldLosses = storage.read<int>('infinite_losses');
+      final oldStreak = storage.read<int>('infinite_streak');
+
+      if (oldWins != null || oldLosses != null || oldStreak != null) {
+        final wins = oldWins ?? 0;
+        final losses = oldLosses ?? 0;
+        final streak = oldStreak ?? 0;
+        
+        final migratedStats = GameStats(
+          gamesPlayed: wins + losses,
+          gamesWon: wins,
+          currentStreak: streak,
+          maxStreak: streak,
+          guessDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0},
+        );
+
+        await saveStats(mode: mode, stats: migratedStats);
+        return migratedStats;
+      }
+    }
+
+    return GameStats.empty();
   }
 
   @override
-  Future<Map<String, int>> getInfiniteStats() async {
-    final wins = storage.read<int>('infinite_wins') ?? 0;
-    final losses = storage.read<int>('infinite_losses') ?? 0;
-    final streak = storage.read<int>('infinite_streak') ?? 0;
-
-    return {'wins': wins, 'losses': losses, 'streak': streak};
+  Future<void> saveStats({required GameMode mode, required GameStats stats}) async {
+    final key = 'stats_${mode.statsKey}';
+    await storage.write(key, stats.toJson());
   }
 
   GameStatus _statusFromString(String s) {
@@ -238,41 +261,35 @@ class GameRepositoryImpl implements GameRepository {
   }
 
   @override
-  Future<void> syncInfiniteStats() async {
-    developer.log('GameRepositoryImpl: syncInfiniteStats() started', name: 'GameRepository');
+  Future<void> syncStats({required GameMode mode}) async {
+    developer.log('GameRepositoryImpl: syncStats() started for mode = ${mode.name}', name: 'GameRepository');
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
-      developer.log('GameRepositoryImpl: syncInfiniteStats: currentUser = ${user?.id}', name: 'GameRepository');
+      developer.log('GameRepositoryImpl: syncStats: currentUser = ${user?.id}', name: 'GameRepository');
       if (user == null) {
-        developer.log('GameRepositoryImpl: syncInfiniteStats: User is null, aborting remote sync', name: 'GameRepository');
+        developer.log('GameRepositoryImpl: syncStats: User is null, aborting remote sync', name: 'GameRepository');
         return;
       }
       
-      developer.log('GameRepositoryImpl: syncInfiniteStats: Querying user_stats for ${user.id}...', name: 'GameRepository');
+      developer.log('GameRepositoryImpl: syncStats: Querying user_stats for ${user.id} and mode ${mode.statsKey}...', name: 'GameRepository');
       final response = await supabase
           .from('user_stats')
           .select()
           .eq('user_id', user.id)
+          .eq('game_mode', mode.statsKey)
           .maybeSingle();
       
-      developer.log('GameRepositoryImpl: syncInfiniteStats: Query response = $response', name: 'GameRepository');
+      developer.log('GameRepositoryImpl: syncStats: Query response = $response', name: 'GameRepository');
       if (response != null) {
-        final played = response['games_played'] as int? ?? 0;
-        final wins = response['games_won'] as int? ?? 0;
-        final losses = played - wins;
-        final streak = response['current_streak'] as int? ?? 0;
-        
-        developer.log('GameRepositoryImpl: syncInfiniteStats: Writing values to storage: wins=$wins, losses=$losses, streak=$streak', name: 'GameRepository');
-        await storage.write('infinite_wins', wins);
-        await storage.write('infinite_losses', losses);
-        await storage.write('infinite_streak', streak);
+        final stats = GameStats.fromJson(Map<String, dynamic>.from(response as Map));
+        await saveStats(mode: mode, stats: stats);
       } else {
-        developer.log('GameRepositoryImpl: syncInfiniteStats: No remote stats found for user.', name: 'GameRepository');
+        developer.log('GameRepositoryImpl: syncStats: No remote stats found for user and mode ${mode.statsKey}.', name: 'GameRepository');
       }
     } catch (e, st) {
       developer.log(
-        'GameRepositoryImpl: syncInfiniteStats ERROR: $e',
+        'GameRepositoryImpl: syncStats ERROR: $e',
         error: e,
         stackTrace: st,
         name: 'GameRepository',
@@ -283,66 +300,59 @@ class GameRepositoryImpl implements GameRepository {
 
   @override
   Future<void> recordGame({
+    required GameMode mode,
     required bool won,
     required int attempts,
   }) async {
-    developer.log('GameRepositoryImpl: recordGame() started: won = $won, attempts = $attempts', name: 'GameRepository');
+    developer.log('GameRepositoryImpl: recordGame() started: mode = ${mode.name}, won = $won, attempts = $attempts', name: 'GameRepository');
     try {
-      final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
-      developer.log('GameRepositoryImpl: recordGame: currentUser = ${user?.id}', name: 'GameRepository');
-      if (user == null) {
-        developer.log('GameRepositoryImpl: recordGame: User is null, aborting remote recordGame', name: 'GameRepository');
-        return;
-      }
+      // 1. Atualiza localmente primeiro
+      final currentStats = await getStats(mode: mode);
       
-      developer.log('GameRepositoryImpl: recordGame: Querying current user_stats for ${user.id}...', name: 'GameRepository');
-      final response = await supabase
-          .from('user_stats')
-          .select()
-          .eq('user_id', user.id)
-          .maybeSingle();
-      developer.log('GameRepositoryImpl: recordGame: Current user_stats = $response', name: 'GameRepository');
+      int gamesPlayed = currentStats.gamesPlayed + 1;
+      int gamesWon = currentStats.gamesWon;
+      int currentStreak = currentStats.currentStreak;
+      int maxStreak = currentStats.maxStreak;
+      final guessDist = Map<int, int>.from(currentStats.guessDistribution);
 
-      int gamesPlayed = (response?['games_played'] as int?) ?? 0;
-      int gamesWon = (response?['games_won'] as int?) ?? 0;
-      int currentStreak = (response?['current_streak'] as int?) ?? 0;
-      int maxStreak = (response?['max_streak'] as int?) ?? 0;
-      Map<String, dynamic> guessDist = Map<String, dynamic>.from(response?['guess_distribution'] as Map? ?? {});
-
-      gamesPlayed++;
       if (won) {
         gamesWon++;
         currentStreak++;
         if (currentStreak > maxStreak) {
           maxStreak = currentStreak;
         }
-        final key = attempts.toString();
-        guessDist[key] = (guessDist[key] as int? ?? 0) + 1;
+        guessDist[attempts] = (guessDist[attempts] ?? 0) + 1;
       } else {
         currentStreak = 0;
       }
 
-      developer.log(
-        'GameRepositoryImpl: recordGame: Performing upsert with: gamesPlayed=$gamesPlayed, gamesWon=$gamesWon, currentStreak=$currentStreak, maxStreak=$maxStreak, guessDist=$guessDist',
-        name: 'GameRepository',
+      final updatedStats = GameStats(
+        gamesPlayed: gamesPlayed,
+        gamesWon: gamesWon,
+        currentStreak: currentStreak,
+        maxStreak: maxStreak,
+        guessDistribution: guessDist,
       );
-      await supabase.from('user_stats').upsert({
-        'user_id': user.id,
-        'games_played': gamesPlayed,
-        'games_won': gamesWon,
-        'current_streak': currentStreak,
-        'max_streak': maxStreak,
-        'guess_distribution': guessDist,
-      });
-      developer.log('GameRepositoryImpl: recordGame: Remote upsert completed successfully', name: 'GameRepository');
 
-      // Sobrescreve o local com a nova verdade remota
-      final losses = gamesPlayed - gamesWon;
-      developer.log('GameRepositoryImpl: recordGame: Writing values to storage: wins=$gamesWon, losses=$losses, streak=$currentStreak', name: 'GameRepository');
-      await storage.write('infinite_wins', gamesWon);
-      await storage.write('infinite_losses', losses);
-      await storage.write('infinite_streak', currentStreak);
+      await saveStats(mode: mode, stats: updatedStats);
+
+      // 2. Tenta enviar para o Supabase se autenticado
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+      if (user == null) {
+        developer.log('GameRepositoryImpl: recordGame: User is null, skipping remote upsert', name: 'GameRepository');
+        return;
+      }
+
+      final payload = {
+        'user_id': user.id,
+        'game_mode': mode.statsKey,
+        ...updatedStats.toJson(),
+      };
+
+      developer.log('GameRepositoryImpl: recordGame: Performing upsert on user_stats: $payload', name: 'GameRepository');
+      await supabase.from('user_stats').upsert(payload);
+      developer.log('GameRepositoryImpl: recordGame: Remote upsert completed successfully', name: 'GameRepository');
     } catch (e, st) {
       developer.log(
         'GameRepositoryImpl: recordGame ERROR: $e',

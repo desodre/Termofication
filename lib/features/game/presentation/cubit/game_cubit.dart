@@ -125,6 +125,13 @@ class GameCubit extends Cubit<GameState> {
           ? keyboardColors
           : _mergeAllKeyboardColors(boardKeyboardColors);
 
+      if (authCubit?.state is UserAuthAuthenticated) {
+        try {
+          await repository.syncStats(mode: state.mode);
+        } catch (_) {}
+      }
+      final statsObj = await repository.getStats(mode: state.mode);
+
       emit(
         state.copyWith(
           status: status,
@@ -139,6 +146,9 @@ class GameCubit extends Cubit<GameState> {
           boardCompleted: normalizedBoardCompleted,
           newlyCorrectBoardIndices: const [],
           correctBoardNonce: 0,
+          statsWins: statsObj.gamesWon,
+          statsLosses: statsObj.gamesPlayed - statsObj.gamesWon,
+          statsStreak: statsObj.currentStreak,
         ),
       );
       return;
@@ -160,6 +170,13 @@ class GameCubit extends Cubit<GameState> {
       );
       final boardCompleted = List.generate(wordIds.length, (_) => false);
 
+      if (authCubit?.state is UserAuthAuthenticated) {
+        try {
+          await repository.syncStats(mode: state.mode);
+        } catch (_) {}
+      }
+      final statsObj = await repository.getStats(mode: state.mode);
+
       emit(
         state.copyWith(
           status: GameStatus.playing,
@@ -174,6 +191,9 @@ class GameCubit extends Cubit<GameState> {
           boardCompleted: boardCompleted,
           newlyCorrectBoardIndices: const [],
           correctBoardNonce: 0,
+          statsWins: statsObj.gamesWon,
+          statsLosses: statsObj.gamesPlayed - statsObj.gamesWon,
+          statsStreak: statsObj.currentStreak,
         ),
       );
       await _saveDailyState();
@@ -195,18 +215,18 @@ class GameCubit extends Cubit<GameState> {
     log('GameCubit: _startInfiniteGame: authCubit state = ${authCubit?.state}', name: 'GameCubit');
     if (authCubit?.state is UserAuthAuthenticated) {
       try {
-        log('GameCubit: _startInfiniteGame: User authenticated. Calling syncInfiniteStats...', name: 'GameCubit');
-        await repository.syncInfiniteStats();
-        log('GameCubit: _startInfiniteGame: syncInfiniteStats completed successfully.', name: 'GameCubit');
+        log('GameCubit: _startInfiniteGame: User authenticated. Calling syncStats...', name: 'GameCubit');
+        await repository.syncStats(mode: GameMode.infinite);
+        log('GameCubit: _startInfiniteGame: syncStats completed successfully.', name: 'GameCubit');
       } catch (e, st) {
-        log('GameCubit: _startInfiniteGame: syncInfiniteStats failed: $e', error: e, stackTrace: st, name: 'GameCubit');
+        log('GameCubit: _startInfiniteGame: syncStats failed: $e', error: e, stackTrace: st, name: 'GameCubit');
         emit(state.copyWith(errorMessage: 'Aviso: Falha ao sincronizar estatísticas da nuvem.'));
       }
     } else {
-      log('GameCubit: _startInfiniteGame: User not authenticated, skipping syncInfiniteStats.', name: 'GameCubit');
+      log('GameCubit: _startInfiniteGame: User not authenticated, skipping syncStats.', name: 'GameCubit');
     }
     
-    final stats = await repository.getInfiniteStats();
+    final statsObj = await repository.getStats(mode: GameMode.infinite);
 
     emit(
       state.copyWith(
@@ -219,9 +239,9 @@ class GameCubit extends Cubit<GameState> {
         cursorIndex: 0,
         guesses: const [],
         boardGuesses: const <List<GuessResult>>[[]],
-        infiniteWins: stats['wins'] ?? 0,
-        infiniteLosses: stats['losses'] ?? 0,
-        infiniteStreak: stats['streak'] ?? 0,
+        statsWins: statsObj.gamesWon,
+        statsLosses: statsObj.gamesPlayed - statsObj.gamesWon,
+        statsStreak: statsObj.currentStreak,
         keyboardColors: const {},
         boardKeyboardColors: const <Map<String, LetterStatus>>[{}],
         boardCompleted: const [false],
@@ -382,9 +402,9 @@ class GameCubit extends Cubit<GameState> {
           updatedBoardCompleted.every((b) => b);
 
       GameStatus nextStatus = GameStatus.playing;
-      int wins = state.infiniteWins;
-      int losses = state.infiniteLosses;
-      int streak = state.infiniteStreak;
+      int wins = state.statsWins;
+      int losses = state.statsLosses;
+      int streak = state.statsStreak;
       List<String> revealedWords = List<String>.filled(
         targetWordIds.length,
         '',
@@ -401,33 +421,23 @@ class GameCubit extends Cubit<GameState> {
           }
         }
 
-        if (state.mode == GameMode.infinite) {
-          wins++;
-          streak++;
-          await repository.saveInfiniteStats(
-            wins: wins,
-            losses: losses,
-            streak: streak,
+        try {
+          log('GameCubit: submitGuess (won): Calling recordGame(mode: ${state.mode.name}, won: true, attempts: $attemptsUsed)...', name: 'GameCubit');
+          await repository.recordGame(
+            mode: state.mode,
+            won: true,
+            attempts: attemptsUsed,
           );
-
-          final authState = authCubit?.state;
-          log('GameCubit: submitGuess (won): authState = $authState', name: 'GameCubit');
-          if (authState is UserAuthAuthenticated) {
-            try {
-              log('GameCubit: submitGuess (won): Calling recordGame(won: true, attempts: $attemptsUsed)...', name: 'GameCubit');
-              await repository.recordGame(
-                won: true,
-                attempts: attemptsUsed,
-              );
-              log('GameCubit: submitGuess (won): recordGame completed successfully.', name: 'GameCubit');
-            } catch (e, st) {
-              log('GameCubit: submitGuess (won): recordGame failed: $e', error: e, stackTrace: st, name: 'GameCubit');
-              emit(state.copyWith(errorMessage: 'Aviso: Falha ao sincronizar estatísticas da nuvem.'));
-            }
-          } else {
-            log('GameCubit: submitGuess (won): User not authenticated, skipping recordGame.', name: 'GameCubit');
-          }
+          log('GameCubit: submitGuess (won): recordGame completed successfully.', name: 'GameCubit');
+        } catch (e, st) {
+          log('GameCubit: submitGuess (won): recordGame failed: $e', error: e, stackTrace: st, name: 'GameCubit');
+          emit(state.copyWith(errorMessage: 'Aviso: Falha ao sincronizar estatísticas com a nuvem.'));
         }
+
+        final statsObj = await repository.getStats(mode: state.mode);
+        wins = statsObj.gamesWon;
+        losses = statsObj.gamesPlayed - statsObj.gamesWon;
+        streak = statsObj.currentStreak;
       } else if (attemptsUsed >= attemptsLimit) {
         nextStatus = GameStatus.lost;
         for (var i = 0; i < targetWordIds.length; i++) {
@@ -438,33 +448,23 @@ class GameCubit extends Cubit<GameState> {
           }
         }
 
-        if (state.mode == GameMode.infinite) {
-          losses++;
-          streak = 0;
-          await repository.saveInfiniteStats(
-            wins: wins,
-            losses: losses,
-            streak: streak,
+        try {
+          log('GameCubit: submitGuess (lost): Calling recordGame(mode: ${state.mode.name}, won: false, attempts: $attemptsUsed)...', name: 'GameCubit');
+          await repository.recordGame(
+            mode: state.mode,
+            won: false,
+            attempts: attemptsUsed,
           );
-
-          final authState = authCubit?.state;
-          log('GameCubit: submitGuess (lost): authState = $authState', name: 'GameCubit');
-          if (authState is UserAuthAuthenticated) {
-            try {
-              log('GameCubit: submitGuess (lost): Calling recordGame(won: false, attempts: $attemptsUsed)...', name: 'GameCubit');
-              await repository.recordGame(
-                won: false,
-                attempts: attemptsUsed,
-              );
-              log('GameCubit: submitGuess (lost): recordGame completed successfully.', name: 'GameCubit');
-            } catch (e, st) {
-              log('GameCubit: submitGuess (lost): recordGame failed: $e', error: e, stackTrace: st, name: 'GameCubit');
-              emit(state.copyWith(errorMessage: 'Aviso: Falha ao sincronizar estatísticas da nuvem.'));
-            }
-          } else {
-            log('GameCubit: submitGuess (lost): User not authenticated, skipping recordGame.', name: 'GameCubit');
-          }
+          log('GameCubit: submitGuess (lost): recordGame completed successfully.', name: 'GameCubit');
+        } catch (e, st) {
+          log('GameCubit: submitGuess (lost): recordGame failed: $e', error: e, stackTrace: st, name: 'GameCubit');
+          emit(state.copyWith(errorMessage: 'Aviso: Falha ao sincronizar estatísticas com a nuvem.'));
         }
+
+        final statsObj = await repository.getStats(mode: state.mode);
+        wins = statsObj.gamesWon;
+        losses = statsObj.gamesPlayed - statsObj.gamesWon;
+        streak = statsObj.currentStreak;
       }
 
       emit(
@@ -483,9 +483,9 @@ class GameCubit extends Cubit<GameState> {
           boardCompleted: updatedBoardCompleted,
           newlyCorrectBoardIndices: newlyCorrectBoardIndices,
           correctBoardNonce: correctBoardNonce,
-          infiniteWins: wins,
-          infiniteLosses: losses,
-          infiniteStreak: streak,
+          statsWins: wins,
+          statsLosses: losses,
+          statsStreak: streak,
         ),
       );
 

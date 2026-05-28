@@ -3,6 +3,7 @@ import 'package:termofication_app/features/game/domain/entities/challenge.dart';
 import 'package:termofication_app/features/game/domain/entities/game_enums.dart';
 import 'package:termofication_app/features/game/domain/entities/guess_result.dart';
 import 'package:termofication_app/features/game/domain/entities/letter_feedback.dart';
+import 'package:termofication_app/features/game/domain/entities/game_stats.dart';
 import 'package:termofication_app/features/game/domain/repositories/game_repository.dart';
 import 'package:termofication_app/features/game/domain/usecases/get_random_word_usecase.dart';
 import 'package:termofication_app/features/game/domain/usecases/submit_guess_usecase.dart';
@@ -15,15 +16,12 @@ class MockGameRepository implements GameRepository {
   GuessResult? submitGuessResult;
 
   final Map<GameMode, Map<String, dynamic>> dailyGameData = {};
-  Map<String, int> infiniteStatsData = {'wins': 0, 'losses': 0, 'streak': 0};
+  final Map<GameMode, GameStats> mockStats = {};
 
   @override
   Future<Challenge> getDailyChallenge({GameMode mode = GameMode.daily}) async {
     return const Challenge(wordId: 1, length: 5);
   }
-
-  @override
-  Future<void> syncInfiniteStats() async {}
 
   @override
   Future<void> warmUp() async {}
@@ -88,23 +86,42 @@ class MockGameRepository implements GameRepository {
   }
 
   @override
-  Future<Map<String, int>> getInfiniteStats() async => infiniteStatsData;
+  Future<GameStats> getStats({required GameMode mode}) async {
+    return mockStats[mode] ?? GameStats.empty();
+  }
 
   @override
-  Future<void> saveInfiniteStats({
-    required int wins,
-    required int losses,
-    required int streak,
+  Future<void> saveStats({
+    required GameMode mode,
+    required GameStats stats,
   }) async {
-    infiniteStatsData = {'wins': wins, 'losses': losses, 'streak': streak};
+    mockStats[mode] = stats;
+  }
+
+  @override
+  Future<void> syncStats({required GameMode mode}) async {
+    // Apenas simula sucesso
   }
 
   @override
   Future<void> recordGame({
+    required GameMode mode,
     required bool won,
     required int attempts,
   }) async {
-    // Apenas simula sucesso
+    final current = await getStats(mode: mode);
+    final guessDist = Map<int, int>.from(current.guessDistribution);
+    if (won) {
+      guessDist[attempts] = (guessDist[attempts] ?? 0) + 1;
+    }
+    final updated = GameStats(
+      gamesPlayed: current.gamesPlayed + 1,
+      gamesWon: current.gamesWon + (won ? 1 : 0),
+      currentStreak: won ? current.currentStreak + 1 : 0,
+      maxStreak: won ? (current.currentStreak + 1 > current.maxStreak ? current.currentStreak + 1 : current.maxStreak) : current.maxStreak,
+      guessDistribution: guessDist,
+    );
+    await saveStats(mode: mode, stats: updated);
   }
 }
 
@@ -190,8 +207,8 @@ void main() {
       expect(cubit.state.guesses.length, 1);
       expect(cubit.state.guesses.first.isCorrect, isTrue);
       expect(cubit.state.targetWord, 'termo'); // Correct word revealed on win!
-      expect(cubit.state.infiniteWins, 1);
-      expect(cubit.state.infiniteStreak, 1);
+      expect(cubit.state.statsWins, 1);
+      expect(cubit.state.statsStreak, 1);
     });
 
     test('deve perder o jogo após atingir limite de palpites', () async {
@@ -211,8 +228,8 @@ void main() {
       expect(cubit.state.status, GameStatus.lost);
       expect(cubit.state.guesses.length, 6);
       expect(cubit.state.targetWord, 'termo'); // Correct word revealed on loss!
-      expect(cubit.state.infiniteLosses, 1);
-      expect(cubit.state.infiniteStreak, 0);
+      expect(cubit.state.statsLosses, 1);
+      expect(cubit.state.statsStreak, 0);
     });
 
     test('deve mapear feedback com letras acentuadas para a tecla base correspondente no teclado virtual', () async {

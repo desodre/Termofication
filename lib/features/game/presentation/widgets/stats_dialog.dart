@@ -7,6 +7,8 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import 'package:get_storage/get_storage.dart';
+import '../../domain/entities/game_stats.dart';
+import '../../domain/entities/game_enums.dart';
 
 class StatsDialog extends StatefulWidget {
   const StatsDialog({super.key});
@@ -18,7 +20,8 @@ class StatsDialog extends StatefulWidget {
 class _StatsDialogState extends State<StatsDialog> {
   bool _isLoading = true;
   String? _errorMessage;
-  Map<String, dynamic> _stats = {};
+  final Map<String, GameStats> _statsMap = {};
+  String _selectedModeKey = 'DAILY';
 
   @override
   void initState() {
@@ -29,6 +32,9 @@ class _StatsDialogState extends State<StatsDialog> {
   Future<void> _fetchStats() async {
     final authState = context.read<AuthCubit>().state;
     developer.log('StatsDialog: _fetchStats() initiated. authState = $authState', name: 'StatsDialog');
+
+    // Inicializa o mapa local como fallback garantido
+    _loadLocalStatsFallback();
 
     if (authState is UserAuthAuthenticated) {
       try {
@@ -43,18 +49,24 @@ class _StatsDialogState extends State<StatsDialog> {
         final response = await supabase
             .from('user_stats')
             .select()
-            .eq('user_id', authState.user.id)
-            .maybeSingle();
+            .eq('user_id', authState.user.id);
 
         developer.log('StatsDialog: Fetch user_stats response = $response', name: 'StatsDialog');
-        if (response != null) {
+        if (response.isNotEmpty) {
           setState(() {
-            _stats = response;
+            for (final row in response) {
+              final modeKey = row['game_mode'] as String?;
+              if (modeKey != null) {
+                _statsMap[modeKey] = GameStats.fromJson(Map<String, dynamic>.from(row as Map));
+              }
+            }
             _isLoading = false;
           });
         } else {
-          developer.log('StatsDialog: No remote stats found (response is null). Triggering local fallback...', name: 'StatsDialog');
-          _loadLocalStatsFallback();
+          developer.log('StatsDialog: No remote stats found. Using local stats.', name: 'StatsDialog');
+          setState(() {
+            _isLoading = false;
+          });
         }
       } catch (e, st) {
         developer.log(
@@ -64,65 +76,72 @@ class _StatsDialogState extends State<StatsDialog> {
           name: 'StatsDialog',
         );
         setState(() {
-          _errorMessage = 'Falha ao sincronizar estatísticas remotas.';
+          _errorMessage = 'Falha ao sincronizar estatísticas remotas. Exibindo dados locais.';
           _isLoading = false;
         });
       }
     } else {
-      developer.log('StatsDialog: User is NOT authenticated. Triggering local fallback...', name: 'StatsDialog');
-      _loadLocalStatsFallback();
-    }
-  }
-
-  void _loadLocalStatsFallback() {
-    final storage = GetStorage();
-    final int wins = storage.read<int>('infinite_wins') ?? 0;
-    final int losses = storage.read<int>('infinite_losses') ?? 0;
-    final int streak = storage.read<int>('infinite_streak') ?? 0;
-    
-    developer.log(
-      'StatsDialog: Loaded local fallback stats -> wins=$wins, losses=$losses, streak=$streak',
-      name: 'StatsDialog',
-    );
-
-    if (mounted) {
+      developer.log('StatsDialog: User is NOT authenticated. Using local stats.', name: 'StatsDialog');
       setState(() {
-        _stats = {
-          "games_played": wins + losses,
-          "games_won": wins,
-          "current_streak": streak,
-          "max_streak": streak,
-          "guess_distribution": {
-            "1": 0,
-            "2": 0,
-            "3": 0,
-            "4": 0,
-            "5": 0,
-            "6": 0,
-          },
-        };
         _isLoading = false;
       });
     }
   }
 
+  void _loadLocalStatsFallback() {
+    final storage = GetStorage();
+    for (final mode in GameMode.values) {
+      final key = 'stats_${mode.statsKey}';
+      final data = storage.read(key);
+      if (data != null) {
+        _statsMap[mode.statsKey] = GameStats.fromJson(Map<String, dynamic>.from(data as Map));
+      } else {
+        if (mode == GameMode.infinite) {
+          final oldWins = storage.read<int>('infinite_wins');
+          final oldLosses = storage.read<int>('infinite_losses');
+          final oldStreak = storage.read<int>('infinite_streak');
+          if (oldWins != null || oldLosses != null || oldStreak != null) {
+            _statsMap[mode.statsKey] = GameStats(
+              gamesPlayed: (oldWins ?? 0) + (oldLosses ?? 0),
+              gamesWon: oldWins ?? 0,
+              currentStreak: oldStreak ?? 0,
+              maxStreak: oldStreak ?? 0,
+              guessDistribution: {1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0},
+            );
+            continue;
+          }
+        }
+        _statsMap[mode.statsKey] = GameStats.empty();
+      }
+    }
+    _statsMap['MULTIPLAYER'] = GameStats.empty();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dist = _stats['guess_distribution'] as Map<dynamic, dynamic>? ?? {};
-    final gamesPlayed = _stats['games_played'] as int? ?? 0;
-    final gamesWon = _stats['games_won'] as int? ?? 0;
-    final currentStreak = _stats['current_streak'] as int? ?? 0;
-    final maxStreak = _stats['max_streak'] as int? ?? 0;
+    final stats = _statsMap[_selectedModeKey] ?? GameStats.empty();
+    
+    final dist = stats.guessDistribution;
+    final gamesPlayed = stats.gamesPlayed;
+    final gamesWon = stats.gamesWon;
+    final currentStreak = stats.currentStreak;
+    final maxStreak = stats.maxStreak;
 
     final winPercentage = gamesPlayed > 0
         ? ((gamesWon / gamesPlayed) * 100).round()
         : 0;
 
+    int maxAttempts = 6;
+    if (_selectedModeKey == 'DAILY_DUETO') {
+      maxAttempts = 7;
+    } else if (_selectedModeKey == 'DAILY_QUARTETO') {
+      maxAttempts = 9;
+    }
+
     // Encontra valor máximo para escalonar o gráfico de barras
     int maxBarValue = 1;
     dist.forEach((key, val) {
-      final int v = int.tryParse(val.toString()) ?? 0;
-      if (v > maxBarValue) maxBarValue = v;
+      if (val > maxBarValue) maxBarValue = val;
     });
 
     return BackdropFilter(
@@ -197,7 +216,45 @@ class _StatsDialogState extends State<StatsDialog> {
                         textAlign: TextAlign.center,
                       ),
                     ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+
+                    // TabBar / Seletor de Modo de Jogo
+                    DefaultTabController(
+                      length: 5,
+                      initialIndex: const ['DAILY', 'DAILY_DUETO', 'DAILY_QUARTETO', 'INFINITE', 'MULTIPLAYER'].indexOf(_selectedModeKey),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TabBar(
+                            isScrollable: true,
+                            tabAlignment: TabAlignment.center,
+                            labelColor: AppColors.correct,
+                            unselectedLabelColor: AppColors.textGray,
+                            indicatorColor: AppColors.correct,
+                            dividerColor: Colors.transparent,
+                            onTap: (index) {
+                              final keys = ['DAILY', 'DAILY_DUETO', 'DAILY_QUARTETO', 'INFINITE', 'MULTIPLAYER'];
+                              setState(() {
+                                _selectedModeKey = keys[index];
+                              });
+                            },
+                            tabs: const [
+                              Tab(text: 'TERMO'),
+                              Tab(text: 'DUETO'),
+                              Tab(text: 'QUARTETO'),
+                              Tab(text: 'INFINITO'),
+                              Tab(text: 'MULTIPLAYER'),
+                            ],
+                          ),
+                          const Divider(
+                            color: Color(0xFF2E2E32),
+                            height: 16,
+                            thickness: 1,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
                     // Grid de estatísticas gerais
                     Row(
@@ -225,73 +282,86 @@ class _StatsDialogState extends State<StatsDialog> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Gráfico de Barras Horizontal
-                    ...List.generate(6, (index) {
-                      final attemptNum = '${index + 1}';
-                      final count =
-                          int.tryParse(dist[attemptNum]?.toString() ?? '0') ??
-                          0;
-                      final ratio = maxBarValue > 0
-                          ? (count / maxBarValue)
-                          : 0.0;
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Text(
-                              attemptNum,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textWhite,
-                              ),
+                    // Gráfico de Barras Horizontal Adaptável
+                    if (_selectedModeKey == 'MULTIPLAYER')
+                      const SizedBox(
+                        height: 160,
+                        child: Center(
+                          child: Text(
+                            'Sem dados. Modo em construção!',
+                            style: TextStyle(
+                              color: AppColors.textGray,
+                              fontSize: 13,
+                              fontStyle: FontStyle.italic,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  final maxWidth = constraints.maxWidth;
-                                  final barWidth = ratio == 0.0
-                                      ? 28.0 // largura mínima para renderizar o número 0
-                                      : (maxWidth - 20) * ratio;
+                          ),
+                        ),
+                      )
+                    else
+                      ...List.generate(maxAttempts, (index) {
+                        final attemptNum = index + 1;
+                        final count = dist[attemptNum] ?? 0;
+                        final ratio = maxBarValue > 0
+                            ? (count / maxBarValue)
+                            : 0.0;
 
-                                  return Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 600,
-                                      ),
-                                      curve: Curves.fastOutSlowIn,
-                                      width: barWidth,
-                                      height: 20,
-                                      decoration: BoxDecoration(
-                                        color: ratio > 0.0
-                                            ? AppColors.correct
-                                            : AppColors.textGray.withValues(
-                                                alpha: 0.3,
-                                              ),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      alignment: Alignment.centerRight,
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: Text(
-                                        '$count',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.textWhite,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Text(
+                                '$attemptNum',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textWhite,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final maxWidth = constraints.maxWidth;
+                                    final barWidth = ratio == 0.0
+                                        ? 28.0 // largura mínima para renderizar o número 0
+                                        : (maxWidth - 20) * ratio;
+
+                                    return Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 600,
+                                        ),
+                                        curve: Curves.fastOutSlowIn,
+                                        width: barWidth,
+                                        height: 20,
+                                        decoration: BoxDecoration(
+                                          color: ratio > 0.0
+                                              ? AppColors.correct
+                                              : AppColors.textGray.withValues(
+                                                  alpha: 0.3,
+                                                ),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        alignment: Alignment.centerRight,
+                                        padding: const EdgeInsets.only(right: 8),
+                                        child: Text(
+                                          '$count',
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textWhite,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
+                                    );
+                                  },
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
+                            ],
+                          ),
+                        );
+                      }),
                   ],
                 ),
         ),

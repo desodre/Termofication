@@ -19,10 +19,10 @@ class GameState {
   final List<int> newlyCorrectBoardIndices;
   final int correctBoardNonce;
 
-  // Estatísticas do modo Infinito
-  final int infiniteWins;
-  final int infiniteLosses;
-  final int infiniteStreak;
+  // Estatísticas do modo de jogo atual
+  final int statsWins;
+  final int statsLosses;
+  final int statsStreak;
 
   const GameState({
     this.status = GameStatus.loading,
@@ -41,9 +41,9 @@ class GameState {
     this.errorMessage,
     this.newlyCorrectBoardIndices = const [],
     this.correctBoardNonce = 0,
-    this.infiniteWins = 0,
-    this.infiniteLosses = 0,
-    this.infiniteStreak = 0,
+    this.statsWins = 0,
+    this.statsLosses = 0,
+    this.statsStreak = 0,
   });
 
   GameState copyWith({
@@ -64,9 +64,9 @@ class GameState {
     bool clearError = false,
     List<int>? newlyCorrectBoardIndices,
     int? correctBoardNonce,
-    int? infiniteWins,
-    int? infiniteLosses,
-    int? infiniteStreak,
+    int? statsWins,
+    int? statsLosses,
+    int? statsStreak,
   }) {
     return GameState(
       status: status ?? this.status,
@@ -85,9 +85,9 @@ class GameState {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       newlyCorrectBoardIndices: newlyCorrectBoardIndices ?? this.newlyCorrectBoardIndices,
       correctBoardNonce: correctBoardNonce ?? this.correctBoardNonce,
-      infiniteWins: infiniteWins ?? this.infiniteWins,
-      infiniteLosses: infiniteLosses ?? this.infiniteLosses,
-      infiniteStreak: infiniteStreak ?? this.infiniteStreak,
+      statsWins: statsWins ?? this.statsWins,
+      statsLosses: statsLosses ?? this.statsLosses,
+      statsStreak: statsStreak ?? this.statsStreak,
     );
   }
 }

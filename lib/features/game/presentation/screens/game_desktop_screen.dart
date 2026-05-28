@@ -120,7 +120,7 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
                             ),
                           ),
                           child: Text(
-                            '🔥 ${state.infiniteStreak}',
+                            '🔥 ${state.statsStreak}',
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,

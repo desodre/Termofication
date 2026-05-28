@@ -164,33 +164,31 @@ class ResultDialog extends StatelessWidget {
                 ),
               ],
 
-              // Stats for Infinite Mode
-              if (state.mode == GameMode.infinite) ...[
-                const SizedBox(height: 24),
-                const Divider(color: AppColors.borderDefault, height: 1),
-                const SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    StatItem(
-                      label: 'Vitórias',
-                      value: '${state.infiniteWins}',
-                      icon: Icons.check_circle_outline,
-                    ),
-                    StatItem(
-                      label: 'Derrotas',
-                      value: '${state.infiniteLosses}',
-                      icon: Icons.highlight_off,
-                    ),
-                    StatItem(
-                      label: 'Sequência',
-                      value: '${state.infiniteStreak} 🔥',
-                      icon: Icons.local_fire_department_outlined,
-                      highlight: true,
-                    ),
-                  ],
-                ),
-              ],
+              // Estatísticas da partida
+              const SizedBox(height: 24),
+              const Divider(color: AppColors.borderDefault, height: 1),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  StatItem(
+                    label: 'Vitórias',
+                    value: '${state.statsWins}',
+                    icon: Icons.check_circle_outline,
+                  ),
+                  StatItem(
+                    label: 'Derrotas',
+                    value: '${state.statsLosses}',
+                    icon: Icons.highlight_off,
+                  ),
+                  StatItem(
+                    label: 'Sequência',
+                    value: '${state.statsStreak} 🔥',
+                    icon: Icons.local_fire_department_outlined,
+                    highlight: true,
+                  ),
+                ],
+              ),
 
               const SizedBox(height: 28),
 
