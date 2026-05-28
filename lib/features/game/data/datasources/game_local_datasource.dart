@@ -21,10 +21,12 @@ abstract class GameLocalDataSource {
 
 // Versão do banco de dados local. Incrementar ao alterar o esquema da tabela
 // para forçar re-cópia do asset no próximo lançamento do app.
-const int _dbVersion = 2;
+const int _dbVersion = 3;
 
 class GameLocalDataSourceImpl implements GameLocalDataSource {
   Database? _database;
+
+  GameLocalDataSourceImpl({Database? database}) : _database = database;
 
   Future<Database> _getDatabase() async {
     if (_database != null) return _database!;
@@ -134,7 +136,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     try {
       // 1. Get all target words of length 5 ordered by ID
       final List<Map<String, dynamic>> targetWords = await db.query(
-        'valid_words',
+        'secret_words',
         columns: ['id'],
         where: 'length = ? AND is_target = 1',
         whereArgs: [5],
@@ -190,7 +192,7 @@ class GameLocalDataSourceImpl implements GameLocalDataSource {
     try {
       // Find all target words of the given length
       final List<Map<String, dynamic>> targets = await db.query(
-        'valid_words',
+        'secret_words',
         columns: ['id'],
         where: 'length = ? AND is_target = 1',
         whereArgs: [length],
