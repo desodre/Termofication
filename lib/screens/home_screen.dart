@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:termofication_app/widgets/build_in_mode_card.dart';
+import 'package:termofication_app/widgets/help_button.dart';
 import 'package:termofication_app/widgets/menu_button.dart';
 import 'package:termofication_app/widgets/mode_card.dart';
 import '../core/theme/app_colors.dart';
@@ -167,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
       ),
+      floatingActionButton: const HelpButton(),
     );
   }
 }
