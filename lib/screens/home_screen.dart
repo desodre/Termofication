@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:termofication_app/widgets/branding_tiles.dart';
 import 'package:termofication_app/widgets/build_in_mode_card.dart';
 import 'package:termofication_app/widgets/help_button.dart';
 import 'package:termofication_app/widgets/menu_button.dart';
@@ -94,23 +95,8 @@ class _HomeScreenState extends State<HomeScreen>
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text(
-                                'TERMO',
-                                style: TextStyle(
-                                  fontSize: 42,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.textWhite,
-                                  letterSpacing: 12,
-                                  shadows: [
-                                    Shadow(
-                                      color: AppColors.correct.withValues(
-                                        alpha: 0.45,
-                                      ),
-                                      blurRadius: 20,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              const BrandingTiles(),
+                              const SizedBox(height: 10),
                               Text(
                                 'FICATION',
                                 style: TextStyle(
