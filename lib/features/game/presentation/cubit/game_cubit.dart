@@ -276,8 +276,36 @@ class GameCubit extends Cubit<GameState> {
                       padded.substring(state.cursorIndex + 1);
                       
     int nextCursor = state.cursorIndex;
-    if (nextCursor < wordLength - 1) {
-      nextCursor++;
+    
+    // 1. Search for the next empty cell to the right of the cursor
+    int nextEmptyToRight = -1;
+    for (int i = state.cursorIndex + 1; i < wordLength; i++) {
+      if (newGuess[i] == ' ') {
+        nextEmptyToRight = i;
+        break;
+      }
+    }
+
+    if (nextEmptyToRight != -1) {
+      nextCursor = nextEmptyToRight;
+    } else {
+      // 2. If no empty cell is found to the right, search from the beginning of the row
+      int nextEmptyFromStart = -1;
+      for (int i = 0; i < state.cursorIndex; i++) {
+        if (newGuess[i] == ' ') {
+          nextEmptyFromStart = i;
+          break;
+        }
+      }
+
+      if (nextEmptyFromStart != -1) {
+        nextCursor = nextEmptyFromStart;
+      } else {
+        // 3. If all cells are full, position the cursor at the end of the row
+        if (nextCursor < wordLength - 1) {
+          nextCursor = wordLength - 1;
+        }
+      }
     }
     
     emit(state.copyWith(

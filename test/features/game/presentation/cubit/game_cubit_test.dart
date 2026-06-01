@@ -286,5 +286,43 @@ void main() {
       expect(cubit.state.newlyCorrectBoardIndices, isEmpty);
       expect(cubit.state.correctBoardNonce, 0);
     });
+
+    test('deve navegar para a próxima célula vazia ao digitar com seleção manual', () async {
+      mockRepository.nextWordId = 1;
+      await cubit.startGame(GameMode.infinite);
+
+      // Digita 't' na posição 0. Cursor deve ir para 1. Palavra: "t    "
+      cubit.addLetter('t');
+      expect(cubit.state.cursorIndex, 1);
+      expect(cubit.state.currentGuess, 't');
+
+      // Seleciona manualmente a posição 3
+      cubit.setCursor(3);
+      expect(cubit.state.cursorIndex, 3);
+
+      // Digita 'm' na posição 3 (palavra deve ficar "t  m ").
+      // A próxima vazia à direita é a 4.
+      cubit.addLetter('m');
+      expect(cubit.state.currentGuess, 't  m');
+      expect(cubit.state.cursorIndex, 4);
+
+      // Digita 'o' na posição 4 (palavra deve ficar "t  mo").
+      // Não há vazias à direita. A primeira vazia a partir do início é 1.
+      cubit.addLetter('o');
+      expect(cubit.state.currentGuess, 't  mo');
+      expect(cubit.state.cursorIndex, 1);
+
+      // Digita 'e' na posição 1 (palavra deve ficar "te mo").
+      // A próxima vazia à direita é a 2.
+      cubit.addLetter('e');
+      expect(cubit.state.currentGuess, 'te mo');
+      expect(cubit.state.cursorIndex, 2);
+
+      // Digita 'r' na posição 2 (palavra fica "termo").
+      // Linha cheia, deve manter cursor no final (4).
+      cubit.addLetter('r');
+      expect(cubit.state.currentGuess, 'termo');
+      expect(cubit.state.cursorIndex, 4);
+    });
   });
 }
