@@ -101,30 +101,44 @@ class _GuessGridState extends State<GuessGrid> {
 
             final isBounceRow = isCompleted && row == _bounceRowIndex;
 
+            Widget rowWidget = Row(
+              mainAxisSize: MainAxisSize.min,
+              children: List.generate(wordLength, (col) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(horizontal: widget.tilePadding),
+                  child: GestureDetector(
+                    onTap: getOnTap?.call(col),
+                    child: LetterTile(
+                      letter: letters[col],
+                      status: statuses[col],
+                      size: widget.tileSize,
+                      shouldBounce: isBounceRow,
+                      isSelected: selecteds[col],
+                      animationDelay: Duration(milliseconds: col * 150),
+                      replicateNonce: state.replicationNonce,
+                      shouldFlipHorizontal: isActive && state.lastReplicatedIndices.contains(col),
+                    ),
+                  ),
+                );
+              }),
+            );
+
+            if (isActive) {
+              rowWidget = GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onDoubleTap: () {
+                  context.read<GameCubit>().replicatePreviousGreenLetters(widget.boardIndex);
+                },
+                child: rowWidget,
+              );
+            }
+
             // 2. Build the unified widget tree to preserve LetterTileState
             return ShakeWidget(
               trigger: isActive ? state.errorMessage : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(wordLength, (col) {
-                    return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: widget.tilePadding),
-                      child: GestureDetector(
-                        onTap: getOnTap?.call(col),
-                        child: LetterTile(
-                          letter: letters[col],
-                          status: statuses[col],
-                          size: widget.tileSize,
-                          shouldBounce: isBounceRow,
-                          isSelected: selecteds[col],
-                          animationDelay: Duration(milliseconds: col * 150),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
+                child: rowWidget,
               ),
             );
           }),

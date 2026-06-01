@@ -18,6 +18,8 @@ class GameState {
   final String? errorMessage;
   final List<int> newlyCorrectBoardIndices;
   final int correctBoardNonce;
+  final List<int> lastReplicatedIndices;
+  final int replicationNonce;
 
   // Estatísticas do modo de jogo atual
   final int statsWins;
@@ -41,6 +43,8 @@ class GameState {
     this.errorMessage,
     this.newlyCorrectBoardIndices = const [],
     this.correctBoardNonce = 0,
+    this.lastReplicatedIndices = const [],
+    this.replicationNonce = 0,
     this.statsWins = 0,
     this.statsLosses = 0,
     this.statsStreak = 0,
@@ -64,6 +68,8 @@ class GameState {
     bool clearError = false,
     List<int>? newlyCorrectBoardIndices,
     int? correctBoardNonce,
+    List<int>? lastReplicatedIndices,
+    int? replicationNonce,
     int? statsWins,
     int? statsLosses,
     int? statsStreak,
@@ -85,6 +91,8 @@ class GameState {
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
       newlyCorrectBoardIndices: newlyCorrectBoardIndices ?? this.newlyCorrectBoardIndices,
       correctBoardNonce: correctBoardNonce ?? this.correctBoardNonce,
+      lastReplicatedIndices: lastReplicatedIndices ?? this.lastReplicatedIndices,
+      replicationNonce: replicationNonce ?? this.replicationNonce,
       statsWins: statsWins ?? this.statsWins,
       statsLosses: statsLosses ?? this.statsLosses,
       statsStreak: statsStreak ?? this.statsStreak,

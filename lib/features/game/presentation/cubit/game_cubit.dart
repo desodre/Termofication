@@ -66,6 +66,8 @@ class GameCubit extends Cubit<GameState> {
         newlyCorrectBoardIndices: const [],
         correctBoardNonce: 0,
         clearError: true,
+        lastReplicatedIndices: const [],
+        replicationNonce: 0,
       ),
     );
 
@@ -257,7 +259,11 @@ class GameCubit extends Cubit<GameState> {
     if (newGuess.length < wordLength) {
       newGuess = newGuess.padRight(wordLength, ' ');
     }
-    emit(state.copyWith(currentGuess: newGuess, cursorIndex: index));
+    emit(state.copyWith(
+      currentGuess: newGuess,
+      cursorIndex: index,
+      lastReplicatedIndices: const [],
+    ));
   }
 
   void addLetter(String letter) {
@@ -311,7 +317,8 @@ class GameCubit extends Cubit<GameState> {
     emit(state.copyWith(
       currentGuess: newGuess.trimRight(), 
       cursorIndex: nextCursor,
-      clearError: true
+      clearError: true,
+      lastReplicatedIndices: const [],
     ));
   }
 
@@ -336,7 +343,8 @@ class GameCubit extends Cubit<GameState> {
     emit(state.copyWith(
       currentGuess: newGuess.trimRight(), 
       cursorIndex: targetIndex,
-      clearError: true
+      clearError: true,
+      lastReplicatedIndices: const [],
     ));
   }
 
@@ -352,7 +360,11 @@ class GameCubit extends Cubit<GameState> {
       return;
     }
 
-    emit(state.copyWith(status: GameStatus.submitting, clearError: true));
+    emit(state.copyWith(
+      status: GameStatus.submitting,
+      clearError: true,
+      lastReplicatedIndices: const [],
+    ));
 
     try {
       final targetWordIds = state.targetWordIds.isNotEmpty
@@ -514,6 +526,7 @@ class GameCubit extends Cubit<GameState> {
           statsWins: wins,
           statsLosses: losses,
           statsStreak: streak,
+          lastReplicatedIndices: const [],
         ),
       );
 
@@ -535,7 +548,71 @@ class GameCubit extends Cubit<GameState> {
   }
 
   void clearError() {
-    emit(state.copyWith(clearError: true));
+    emit(state.copyWith(clearError: true, lastReplicatedIndices: const []));
+  }
+
+  void replicatePreviousGreenLetters(int boardIndex) {
+    if (state.status != GameStatus.playing) return;
+    if (boardIndex >= state.boardGuesses.length) return;
+
+    final guesses = state.boardGuesses[boardIndex];
+    if (guesses.isEmpty) return; // Nenhuma tentativa anterior neste tabuleiro
+
+    final lastGuess = guesses.last;
+    
+    // Garantir que a palavra atual tenha tamanho correto para manipulação
+    String padded = state.currentGuess.padRight(wordLength, ' ');
+    List<String> chars = padded.split('');
+    List<int> replicatedIndices = [];
+
+    for (int i = 0; i < wordLength; i++) {
+      if (lastGuess.feedback[i].status == LetterStatus.correct) {
+        final greenLetter = lastGuess.feedback[i].letter;
+        if (chars[i] != greenLetter) {
+          chars[i] = greenLetter;
+          replicatedIndices.add(i);
+        }
+      }
+    }
+
+    if (replicatedIndices.isNotEmpty) {
+      String newGuess = chars.join('');
+      
+      // Mover cursor inteligentemente para a próxima célula vazia
+      int nextCursor = state.cursorIndex;
+      // Se a posição atual do cursor foi preenchida, encontra a próxima vazia à direita, senão à esquerda
+      if (newGuess[nextCursor] != ' ') {
+        int nextEmpty = -1;
+        for (int i = nextCursor + 1; i < wordLength; i++) {
+          if (newGuess[i] == ' ') {
+            nextEmpty = i;
+            break;
+          }
+        }
+        if (nextEmpty == -1) {
+          for (int i = 0; i < nextCursor; i++) {
+            if (newGuess[i] == ' ') {
+              nextEmpty = i;
+              break;
+            }
+          }
+        }
+        if (nextEmpty != -1) {
+          nextCursor = nextEmpty;
+        } else {
+          // Se não há posições vazias, posiciona o cursor na última célula
+          nextCursor = wordLength - 1;
+        }
+      }
+
+      emit(state.copyWith(
+        currentGuess: newGuess.trimRight(),
+        cursorIndex: nextCursor,
+        lastReplicatedIndices: replicatedIndices,
+        replicationNonce: state.replicationNonce + 1,
+        clearError: true,
+      ));
+    }
   }
 
   Future<void> _saveDailyState() async {

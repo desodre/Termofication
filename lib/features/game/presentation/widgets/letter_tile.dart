@@ -10,6 +10,8 @@ class LetterTile extends StatefulWidget {
   final Duration? animationDelay;
   final bool isSelected;
   final bool shouldBounce;
+  final int replicateNonce;
+  final bool shouldFlipHorizontal;
 
   const LetterTile({
     super.key,
@@ -19,6 +21,8 @@ class LetterTile extends StatefulWidget {
     this.animationDelay,
     this.isSelected = false,
     this.shouldBounce = false,
+    this.replicateNonce = 0,
+    this.shouldFlipHorizontal = false,
   });
 
   @override
@@ -34,6 +38,9 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
 
   late AnimationController _bounceController;
   late Animation<double> _bounceAnimation;
+
+  late AnimationController _replicateFlipController;
+  late Animation<double> _replicateFlipAnimation;
 
   @override
   void initState() {
@@ -92,6 +99,15 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
       ),
     ]).animate(_bounceController);
 
+    // Replicate Flip Animation (3D X-Axis Rotation 360 degrees)
+    _replicateFlipController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    _replicateFlipAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _replicateFlipController, curve: Curves.easeInOut),
+    );
+
     // If game loads with pre-existing feedback, display it flipped immediately
     if (widget.status != LetterStatus.unknown) {
       _flipController.value = 1.0;
@@ -134,6 +150,18 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
         });
       }
     }
+
+    // 5. Trigger replicate spin animation when replicateNonce changes
+    if (widget.shouldFlipHorizontal && widget.replicateNonce != oldWidget.replicateNonce) {
+      final bool animationsEnabled = GetStorage().read<bool>('animations_enabled') ?? true;
+      if (animationsEnabled) {
+        Future.delayed(widget.animationDelay ?? Duration.zero, () {
+          if (mounted) {
+            _replicateFlipController.forward(from: 0.0);
+          }
+        });
+      }
+    }
   }
 
   @override
@@ -141,13 +169,19 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
     _flipController.dispose();
     _popController.dispose();
     _bounceController.dispose();
+    _replicateFlipController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: Listenable.merge([_flipAnimation, _popAnimation, _bounceAnimation]),
+      animation: Listenable.merge([
+        _flipAnimation,
+        _popAnimation,
+        _bounceAnimation,
+        _replicateFlipAnimation,
+      ]),
       builder: (context, child) {
         final flipVal = _flipAnimation.value;
         final isFront = flipVal <= 0.5;
@@ -159,6 +193,10 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
 
         // Effective status based on whether we are front or back during the flip
         final currentStatus = isFront ? LetterStatus.unknown : widget.status;
+
+        // Replicate angle (spin 360 degrees X-axis)
+        final replicateVal = _replicateFlipAnimation.value;
+        final replicateAngle = replicateVal * 2 * 3.141592653589793;
 
         Color backgroundColor;
         Color borderColor;
@@ -194,7 +232,8 @@ class _LetterTileState extends State<LetterTile> with TickerProviderStateMixin {
             child: Transform(
               transform: Matrix4.identity()
                 ..setEntry(3, 2, 0.002) // 3D Perspective!
-                ..rotateY(angle),
+                ..rotateY(angle)
+                ..rotateX(replicateAngle),
               alignment: Alignment.center,
               child: Container(
                 width: widget.size,

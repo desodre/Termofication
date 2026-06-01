@@ -324,5 +324,48 @@ void main() {
       expect(cubit.state.currentGuess, 'termo');
       expect(cubit.state.cursorIndex, 4);
     });
+
+    test('deve replicar letras verdes da tentativa anterior e ajustar cursor', () async {
+      mockRepository.nextWordId = 1; // target is 'termo'
+      await cubit.startGame(GameMode.infinite);
+
+      // Digita e submete primeiro palpite: 'tarta'
+      // target = 'termo'
+      // Feedback: 't' (correto), 'a' (ausente), 'r' (correto), 't' (ausente), 'a' (ausente)
+      cubit.addLetter('t');
+      cubit.addLetter('a');
+      cubit.addLetter('r');
+      cubit.addLetter('t');
+      cubit.addLetter('a');
+      await cubit.submitGuess();
+
+      expect(cubit.state.boardGuesses[0].length, 1);
+
+      // Executa a replicação
+      cubit.replicatePreviousGreenLetters(0);
+
+      // Deve replicar apenas 't' no índice 0 e 'r' no índice 2
+      // currentGuess deve ser "t r"
+      expect(cubit.state.currentGuess, 't r');
+      expect(cubit.state.lastReplicatedIndices, containsAll([0, 2]));
+      expect(cubit.state.replicationNonce, 1);
+      // Próxima célula vazia é 1
+      expect(cubit.state.cursorIndex, 1);
+
+      // Se limparmos ou digitarmos, lastReplicatedIndices deve resetar
+      cubit.addLetter('e');
+      expect(cubit.state.lastReplicatedIndices, isEmpty);
+    });
+
+    test('não deve fazer nada se não houver tentativas anteriores', () async {
+      mockRepository.nextWordId = 1;
+      await cubit.startGame(GameMode.infinite);
+
+      cubit.replicatePreviousGreenLetters(0);
+
+      expect(cubit.state.currentGuess, isEmpty);
+      expect(cubit.state.lastReplicatedIndices, isEmpty);
+      expect(cubit.state.replicationNonce, 0);
+    });
   });
 }
