@@ -13,7 +13,6 @@ import 'package:termofication_app/features/game/domain/usecases/submit_guess_use
 import 'package:termofication_app/features/game/presentation/cubit/game_cubit.dart';
 import 'package:termofication_app/features/game/presentation/screens/game_desktop_screen.dart';
 import 'package:termofication_app/features/game/presentation/widgets/result_dialog.dart';
-import 'package:termofication_app/features/game/presentation/widgets/virtual_keyboard.dart';
 
 // Self-contained Mock Repository for flow testing
 class FlowMockGameRepository implements GameRepository {
