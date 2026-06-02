@@ -173,6 +173,13 @@ class _GameDesktopScreenState extends State<GameDesktopScreen> {
                       AudioService.playVictory();
                     }
                   });
+                } else if (state.status == GameStatus.lost) {
+                  Future.delayed(const Duration(milliseconds: 400), () {
+                    if (!context.mounted) return;
+                    if (currentCubit.state.status == GameStatus.lost) {
+                      AudioService.playDefeat();
+                    }
+                  });
                 }
               }
 

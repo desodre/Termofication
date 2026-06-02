@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:developer';
 import '../../../../core/network/api_client.dart';
 import '../../../../core/utils/string_utils.dart';
+import '../../../../core/services/audio_service.dart';
 import '../../../auth/presentation/cubit/auth_cubit.dart';
 import '../../../auth/presentation/cubit/auth_state.dart';
 import '../../domain/entities/game_enums.dart';
@@ -281,6 +282,8 @@ class GameCubit extends Cubit<GameState> {
                       letter.toLowerCase() + 
                       padded.substring(state.cursorIndex + 1);
                       
+    AudioService.playTyping();
+                      
     int nextCursor = state.cursorIndex;
     
     // 1. Search for the next empty cell to the right of the cursor
@@ -340,6 +343,8 @@ class GameCubit extends Cubit<GameState> {
        targetIndex = 0;
     }
     
+    AudioService.playBackspace();
+    
     emit(state.copyWith(
       currentGuess: newGuess.trimRight(), 
       cursorIndex: targetIndex,
@@ -352,6 +357,7 @@ class GameCubit extends Cubit<GameState> {
     if (state.status != GameStatus.playing) return;
     final guessStr = state.currentGuess;
     if (guessStr.trim().length < wordLength || guessStr.contains(' ')) {
+      AudioService.playError();
       emit(
         state.copyWith(
           errorMessage: 'Palavra incompleta. Digite $wordLength letras.',
@@ -534,6 +540,7 @@ class GameCubit extends Cubit<GameState> {
         await _saveDailyState();
       }
     } on InvalidWordException catch (e) {
+      AudioService.playError();
       emit(state.copyWith(status: GameStatus.playing, errorMessage: e.message));
     } on NetworkException catch (e) {
       emit(state.copyWith(status: GameStatus.playing, errorMessage: e.message));
@@ -604,6 +611,8 @@ class GameCubit extends Cubit<GameState> {
           nextCursor = wordLength - 1;
         }
       }
+
+      AudioService.playSnap();
 
       emit(state.copyWith(
         currentGuess: newGuess.trimRight(),

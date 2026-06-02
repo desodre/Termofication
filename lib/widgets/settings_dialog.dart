@@ -22,7 +22,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
   void initState() {
     super.initState();
     _victorySound = _storage.read<bool>('victory_sound_enabled') ?? true;
-    _clickSound = _storage.read<bool>('click_sound_enabled') ?? false;
+    _clickSound = _storage.read<bool>('click_sound_enabled') ?? true;
     _gradientsEnabled = _storage.read<bool>('gradients_enabled') ?? true;
     _animationsEnabled = _storage.read<bool>('animations_enabled') ?? true;
   }

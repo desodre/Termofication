@@ -126,6 +126,7 @@ class MockGameRepository implements GameRepository {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late GameCubit cubit;
   late MockGameRepository mockRepository;
   late SubmitGuessUseCase submitGuessUseCase;
