@@ -126,7 +126,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Container(
         width: 380,
-        maxHeight: 520, // Limita altura máxima para visualização responsiva
+        height: 520, // Limita altura máxima para visualização responsiva
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
           gradient: LinearGradient(
