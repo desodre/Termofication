@@ -15,7 +15,7 @@ class AudioService {
 
     try {
       await _clickPlayer.stop();
-      await _clickPlayer.play(AssetSource('sounds/click_sound.mp3'));
+      await _clickPlayer.play(AssetSource('sounds/click_sound.wav'));
     } catch (e) {
       // Ignora falhas de áudio silenciosamente em produção
       developer.log('AudioService: Erro ao tocar som de clique: $e', name: 'AudioService', error: e);
@@ -29,7 +29,7 @@ class AudioService {
 
     try {
       await _victoryPlayer.stop();
-      await _victoryPlayer.play(AssetSource('sounds/mission_complete.mp3'));
+      await _victoryPlayer.play(AssetSource('sounds/mission_complete.wav'));
     } catch (e) {
       // Ignora falhas de áudio silenciosamente em produção
       developer.log('AudioService: Erro ao tocar som de vitória: $e', name: 'AudioService', error: e);
