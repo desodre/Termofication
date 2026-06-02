@@ -14,7 +14,12 @@ class SettingsDialog extends StatefulWidget {
 class _SettingsDialogState extends State<SettingsDialog> {
   final _storage = GetStorage();
   late bool _victorySound;
+  late bool _defeatSound;
+  late bool _typingSound;
+  late bool _backspaceSound;
   late bool _clickSound;
+  late bool _snapSound;
+  late bool _errorSound;
   late bool _gradientsEnabled;
   late bool _animationsEnabled;
 
@@ -22,7 +27,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
   void initState() {
     super.initState();
     _victorySound = _storage.read<bool>('victory_sound_enabled') ?? true;
+    _defeatSound = _storage.read<bool>('defeat_sound_enabled') ?? true;
+    _typingSound = _storage.read<bool>('typing_sound_enabled') ?? true;
+    _backspaceSound = _storage.read<bool>('backspace_sound_enabled') ?? true;
     _clickSound = _storage.read<bool>('click_sound_enabled') ?? true;
+    _snapSound = _storage.read<bool>('snap_sound_enabled') ?? true;
+    _errorSound = _storage.read<bool>('error_sound_enabled') ?? true;
     _gradientsEnabled = _storage.read<bool>('gradients_enabled') ?? true;
     _animationsEnabled = _storage.read<bool>('animations_enabled') ?? true;
   }
@@ -35,14 +45,61 @@ class _SettingsDialogState extends State<SettingsDialog> {
     });
   }
 
+  void _toggleDefeatSound(bool value) {
+    AudioService.playClick();
+    setState(() {
+      _defeatSound = value;
+      _storage.write('defeat_sound_enabled', value);
+    });
+  }
+
+  void _toggleTypingSound(bool value) {
+    setState(() {
+      _typingSound = value;
+      _storage.write('typing_sound_enabled', value);
+    });
+    if (value) {
+      AudioService.playTyping();
+    }
+  }
+
+  void _toggleBackspaceSound(bool value) {
+    setState(() {
+      _backspaceSound = value;
+      _storage.write('backspace_sound_enabled', value);
+    });
+    if (value) {
+      AudioService.playBackspace();
+    }
+  }
+
   void _toggleClickSound(bool value) {
     setState(() {
       _clickSound = value;
       _storage.write('click_sound_enabled', value);
     });
-    // Play sound immediately if turned on to give active feedback
     if (value) {
       AudioService.playClick();
+    }
+  }
+
+  void _toggleSnapSound(bool value) {
+    setState(() {
+      _snapSound = value;
+      _storage.write('snap_sound_enabled', value);
+    });
+    if (value) {
+      AudioService.playSnap();
+    }
+  }
+
+  void _toggleErrorSound(bool value) {
+    setState(() {
+      _errorSound = value;
+      _storage.write('error_sound_enabled', value);
+    });
+    if (value) {
+      AudioService.playError();
     }
   }
 
@@ -69,6 +126,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
       child: Container(
         width: 380,
+        maxHeight: 520, // Limita altura máxima para visualização responsiva
         padding: const EdgeInsets.all(28),
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -121,45 +179,92 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
 
-            // Seção de Áudio
-            const _SectionHeader(title: 'EFEITOS SONOROS'),
-            const SizedBox(height: 8),
-            _SettingSwitchTile(
-              title: 'Som de Vitória',
-              subtitle: 'Toca ao desvendar a palavra',
-              value: _victorySound,
-              onChanged: _toggleVictorySound,
-              activeColor: AppColors.correct,
-            ),
-            _SettingSwitchTile(
-              title: 'Som de Clique',
-              subtitle: 'Sons de interação nos menus',
-              value: _clickSound,
-              onChanged: _toggleClickSound,
-              activeColor: AppColors.present,
-            ),
-            const SizedBox(height: 20),
+            // Corpo com scroll para evitar overflow
+            Flexible(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Seção de Áudio
+                    const _SectionHeader(title: 'EFEITOS SONOROS'),
+                    const SizedBox(height: 8),
+                    _SettingSwitchTile(
+                      title: 'Som de Vitória',
+                      subtitle: 'Toca ao desvendar a palavra',
+                      value: _victorySound,
+                      onChanged: _toggleVictorySound,
+                      activeColor: AppColors.correct,
+                    ),
+                    _SettingSwitchTile(
+                      title: 'Som de Derrota',
+                      subtitle: 'Toca ao esgotar as tentativas',
+                      value: _defeatSound,
+                      onChanged: _toggleDefeatSound,
+                      activeColor: AppColors.absent,
+                    ),
+                    _SettingSwitchTile(
+                      title: 'Som de Digitação',
+                      subtitle: 'Bip sutil ao inserir letras',
+                      value: _typingSound,
+                      onChanged: _toggleTypingSound,
+                      activeColor: AppColors.present,
+                    ),
+                    _SettingSwitchTile(
+                      title: 'Som de Backspace',
+                      subtitle: 'Bip sutil ao apagar letras',
+                      value: _backspaceSound,
+                      onChanged: _toggleBackspaceSound,
+                      activeColor: AppColors.present,
+                    ),
+                    _SettingSwitchTile(
+                      title: 'Som de Clique (Menus)',
+                      subtitle: 'Sons de navegação nos botões',
+                      value: _clickSound,
+                      onChanged: _toggleClickSound,
+                      activeColor: AppColors.present,
+                    ),
+                    _SettingSwitchTile(
+                      title: 'Som de Replicação',
+                      subtitle: 'Sons de duplo clique nos tabuleiros',
+                      value: _snapSound,
+                      onChanged: _toggleSnapSound,
+                      activeColor: AppColors.correct,
+                    ),
+                    _SettingSwitchTile(
+                      title: 'Som de Alerta (Erro)',
+                      subtitle: 'Som de alerta ao errar palpite',
+                      value: _errorSound,
+                      onChanged: _toggleErrorSound,
+                      activeColor: AppColors.absent,
+                    ),
+                    const SizedBox(height: 20),
 
-            // Seção Visual
-            const _SectionHeader(title: 'VISUAL E APARÊNCIA'),
-            const SizedBox(height: 8),
-            _SettingSwitchTile(
-              title: 'Gradientes Temáticos',
-              subtitle: 'Fundo ambientado por modo',
-              value: _gradientsEnabled,
-              onChanged: _toggleGradients,
-              activeColor: AppColors.correct,
+                    // Seção Visual
+                    const _SectionHeader(title: 'VISUAL E APARÊNCIA'),
+                    const SizedBox(height: 8),
+                    _SettingSwitchTile(
+                      title: 'Gradientes Temáticos',
+                      subtitle: 'Fundo ambientado por modo',
+                      value: _gradientsEnabled,
+                      onChanged: _toggleGradients,
+                      activeColor: AppColors.correct,
+                    ),
+                    _SettingSwitchTile(
+                      title: 'Animações de Acerto',
+                      subtitle: 'Efeito de salto nas letras ao acertar',
+                      value: _animationsEnabled,
+                      onChanged: _toggleAnimations,
+                      activeColor: AppColors.correct,
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
             ),
-            _SettingSwitchTile(
-              title: 'Animações de Acerto',
-              subtitle: 'Efeito de salto nas letras ao acertar',
-              value: _animationsEnabled,
-              onChanged: _toggleAnimations,
-              activeColor: AppColors.correct,
-            ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
             // Divisor
             Container(

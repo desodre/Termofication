@@ -54,7 +54,7 @@ class AudioService {
 
   /// Toca o som de derrota.
   static Future<void> playDefeat() async {
-    final bool victoryEnabled = _readBool('victory_sound_enabled', true);
+    final bool victoryEnabled = _readBool('defeat_sound_enabled', true);
     if (!victoryEnabled) return;
 
     try {
@@ -68,7 +68,7 @@ class AudioService {
 
   /// Toca o som de digitação rápida de letra.
   static Future<void> playTyping() async {
-    final bool clickEnabled = _readBool('click_sound_enabled', true);
+    final bool clickEnabled = _readBool('typing_sound_enabled', true);
     if (!clickEnabled) return;
 
     try {
@@ -82,7 +82,7 @@ class AudioService {
 
   /// Toca o som de apagar letra (Backspace).
   static Future<void> playBackspace() async {
-    final bool clickEnabled = _readBool('click_sound_enabled', true);
+    final bool clickEnabled = _readBool('backspace_sound_enabled', true);
     if (!clickEnabled) return;
 
     try {
@@ -96,7 +96,7 @@ class AudioService {
 
   /// Toca o som de encaixe de letras (Replicação com duplo clique).
   static Future<void> playSnap() async {
-    final bool clickEnabled = _readBool('click_sound_enabled', true);
+    final bool clickEnabled = _readBool('snap_sound_enabled', true);
     if (!clickEnabled) return;
 
     try {
@@ -110,7 +110,7 @@ class AudioService {
 
   /// Toca o som de erro (Buzz de palavra incompleta/inválida).
   static Future<void> playError() async {
-    final bool clickEnabled = _readBool('click_sound_enabled', true);
+    final bool clickEnabled = _readBool('error_sound_enabled', true);
     if (!clickEnabled) return;
 
     try {
