@@ -123,15 +123,13 @@ class _GuessGridState extends State<GuessGrid> {
               }),
             );
 
-            if (isActive) {
-              rowWidget = GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onDoubleTap: () {
-                  context.read<GameCubit>().replicatePreviousGreenLetters(widget.boardIndex);
-                },
-                child: rowWidget,
-              );
-            }
+            rowWidget = GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onDoubleTap: isActive
+                  ? () => context.read<GameCubit>().replicatePreviousGreenLetters(widget.boardIndex)
+                  : null,
+              child: rowWidget,
+            );
 
             // 2. Build the unified widget tree to preserve LetterTileState
             return ShakeWidget(
