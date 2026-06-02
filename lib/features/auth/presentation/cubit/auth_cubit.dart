@@ -1,5 +1,9 @@
 import 'dart:developer' as developer;
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth_state.dart';
 
@@ -27,7 +31,6 @@ class AuthCubit extends Cubit<UserAuthState> {
         );
       } else {
         developer.log('AuthCubit: No valid session. Current state = $state', name: 'AuthCubit');
-        // Se já estivermos explicitamente em modo anônimo, não reseta para Initial
         if (state is! UserAuthAnonymous) {
           developer.log('AuthCubit: Emitting UserAuthInitial', name: 'AuthCubit');
           emit(const UserAuthInitial());
@@ -39,16 +42,62 @@ class AuthCubit extends Cubit<UserAuthState> {
   Future<void> loginWithGoogle() async {
     developer.log('AuthCubit: loginWithGoogle() started', name: 'AuthCubit');
     emit(const UserAuthLoading());
+
+    // 1. Tenta login nativo no Android e iOS
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      try {
+        developer.log('AuthCubit: Mobile platform detected. Attempting native Google Sign-in...', name: 'AuthCubit');
+        final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
+        final iosClientId = dotenv.env['GOOGLE_IOS_CLIENT_ID'];
+
+        final googleSignIn = GoogleSignIn(
+          clientId: iosClientId,
+          serverClientId: webClientId,
+        );
+
+        final googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          developer.log('AuthCubit: Native Google Sign-in cancelled by user.', name: 'AuthCubit');
+          emit(const UserAuthInitial());
+          return;
+        }
+
+        final googleAuth = await googleUser.authentication;
+        final idToken = googleAuth.idToken;
+        final accessToken = googleAuth.accessToken;
+
+        if (idToken == null) {
+          throw StateError('Não foi possível obter o ID Token do Google.');
+        }
+
+        developer.log('AuthCubit: Native Google Sign-in successful. Signing in with Supabase ID Token...', name: 'AuthCubit');
+        await _supabase.auth.signInWithIdToken(
+          provider: OAuthProvider.google,
+          idToken: idToken,
+          accessToken: accessToken,
+        );
+        developer.log('AuthCubit: Supabase sign-in with ID Token completed successfully.', name: 'AuthCubit');
+        return;
+      } catch (e, st) {
+        developer.log(
+          'AuthCubit: Native Google Sign-in failed: $e. Falling back to browser-based OAuth...',
+          error: e,
+          stackTrace: st,
+          name: 'AuthCubit',
+        );
+      }
+    }
+
+    // 2. Fallback ou Desktop/Web: usa login via navegador externo
     try {
-      // Abre fluxo nativo/web de OAuth usando o Supabase Auth
-      developer.log('AuthCubit: Calling signInWithOAuth with termofication://login-callback', name: 'AuthCubit');
+      developer.log('AuthCubit: Starting browser-based OAuth fallback with termofication://login-callback', name: 'AuthCubit');
       await _supabase.auth.signInWithOAuth(
         OAuthProvider.google,
         redirectTo: 'termofication://login-callback',
       );
       developer.log('AuthCubit: signInWithOAuth call completed', name: 'AuthCubit');
     } catch (e, st) {
-      developer.log('AuthCubit: loginWithGoogle error = $e', error: e, stackTrace: st, name: 'AuthCubit');
+      developer.log('AuthCubit: Browser OAuth error = $e', error: e, stackTrace: st, name: 'AuthCubit');
       emit(UserAuthError('Falha ao autenticar com o Google: ${e.toString()}'));
     }
   }
